@@ -1,7 +1,9 @@
 import { Footer, Layout, Navbar } from "nextra-theme-docs";
 import { Banner, Head } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
+// @ts-ignore nextra-theme-docs
 import "nextra-theme-docs/style.css";
+import { ReactNode } from 'react';
 
 export const metadata = {
   // Define your metadata here
@@ -33,7 +35,11 @@ const footer = (
   <Footer>MIT {new Date().getFullYear()} © Gopher Uzbekistan.</Footer>
 );
 
-export default async function RootLayout({ children }) {
+interface RootLayoutProps {
+  children: ReactNode;
+}
+
+export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html
       // Not required, but good for SEO
