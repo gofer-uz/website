@@ -5,9 +5,10 @@ import { MDXWrapper } from "../../mdx-components";
 export const generateStaticParams = generateStaticParamsFor("mdxPath");
 
 interface MetadataProps {
-  params: {
+  params: Promise<{
     mdxPath: string[];
-  };
+  }>;
+  searchParams?: Promise<Record<string, string | string[]>>;
 }
 
 export async function generateMetadata(props: MetadataProps) {
@@ -24,10 +25,10 @@ interface WrapperProps {
 }
 
 interface PageProps {
-  params: {
+  params: Promise<{
     mdxPath: string[];
-  };
-  searchParams?: Record<string, string | string[]>;
+  }>;
+  searchParams?: Promise<Record<string, string | string[]>>;
 }
 
 export default async function Page(props: PageProps) {
