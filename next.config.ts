@@ -15,8 +15,8 @@ const config: NextConfig = {
   images: {
     unoptimized: true,
   },
-  assetPrefix: '.',
-  basePath: '',
+  // assetPrefix: '/',
+  // basePath: '',
   trailingSlash: true,
 };
 

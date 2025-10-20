@@ -1,27 +1,15 @@
 import { generateStaticParamsFor, importPage } from "nextra/pages";
-import { ReactNode } from "react";
 import { MDXWrapper } from "../../mdx-components";
+import { getPageMap } from "nextra/page-map";
+import LayoutBlog from "./layout-blog";
+import LayoutDocs from "./layout-docs";
 
 export const generateStaticParams = generateStaticParamsFor("mdxPath");
 
-interface MetadataProps {
-  params: Promise<{
-    mdxPath: string[];
-  }>;
-  searchParams?: Promise<Record<string, string | string[]>>;
-}
-
-export async function generateMetadata(props: MetadataProps) {
-  const params = await props.params;
-  const { metadata } = await importPage(params.mdxPath);
-  return metadata;
-}
-
-interface WrapperProps {
-  children: ReactNode;
-  toc?: any;
-  metadata?: any;
-  sourceCode?: string;
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params
+  const { metadata } = await importPage(params.mdxPath)
+  return metadata
 }
 
 interface PageProps {
@@ -32,7 +20,10 @@ interface PageProps {
 }
 
 export default async function Page(props: PageProps) {
+
+  console.log("props", props)
   const params = await props.params;
+  console.log("params", params)
   const {
     default: MDXContent,
     toc,
@@ -40,9 +31,22 @@ export default async function Page(props: PageProps) {
     sourceCode,
   } = await importPage(params.mdxPath);
 
-  return (
-    <MDXWrapper toc={toc} metadata={metadata} sourceCode={sourceCode}>
-      <MDXContent {...props} params={params} />
-    </MDXWrapper>
-  );
+  // console.log(metadata)
+
+  const layout = ["docs", "blog"].find(l => l == metadata?.template) ?? "docs";
+
+  switch (layout) {
+    case "docs":
+      return <LayoutDocs>
+        <MDXWrapper toc={toc} metadata={metadata} sourceCode={sourceCode}>
+          <MDXContent {...props} params={params} />
+        </MDXWrapper>
+      </LayoutDocs>;
+    case "blog":
+      return <LayoutBlog>
+        <MDXContent {...props} params={params} />
+      </LayoutBlog>;
+  }
 }
+
+
