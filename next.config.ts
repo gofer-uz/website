@@ -6,7 +6,8 @@ const withNextra = nextra({
   search: {
     codeblocks: false
   },
-  contentDirBasePath: '/'
+  readingTime: true,
+  defaultShowCopyCode: true,
 });
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -15,8 +16,6 @@ const config: NextConfig = {
   images: {
     unoptimized: true,
   },
-  assetPrefix: '.',
-  basePath: '',
   trailingSlash: true,
 };
 

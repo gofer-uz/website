@@ -1,37 +1,17 @@
 import { generateStaticParamsFor, importPage } from "nextra/pages";
-import { ReactNode } from "react";
-import { MDXWrapper } from "../../mdx-components";
+import { useMDXComponents as getMDXComponents } from "../../mdx-components";
 
 export const generateStaticParams = generateStaticParamsFor("mdxPath");
 
-interface MetadataProps {
-  params: Promise<{
-    mdxPath: string[];
-  }>;
-  searchParams?: Promise<Record<string, string | string[]>>;
-}
-
-export async function generateMetadata(props: MetadataProps) {
+export async function generateMetadata(props: any) {
   const params = await props.params;
   const { metadata } = await importPage(params.mdxPath);
   return metadata;
 }
 
-interface WrapperProps {
-  children: ReactNode;
-  toc?: any;
-  metadata?: any;
-  sourceCode?: string;
-}
+const Wrapper = getMDXComponents().wrapper || (({ children }: any) => <>{children}</>);
 
-interface PageProps {
-  params: Promise<{
-    mdxPath: string[];
-  }>;
-  searchParams?: Promise<Record<string, string | string[]>>;
-}
-
-export default async function Page(props: PageProps) {
+export default async function Page(props: any) {
   const params = await props.params;
   const {
     default: MDXContent,
@@ -39,10 +19,9 @@ export default async function Page(props: PageProps) {
     metadata,
     sourceCode,
   } = await importPage(params.mdxPath);
-
   return (
-    <MDXWrapper toc={toc} metadata={metadata} sourceCode={sourceCode}>
+    <Wrapper toc={toc} metadata={metadata} sourceCode={sourceCode}>
       <MDXContent {...props} params={params} />
-    </MDXWrapper>
+    </Wrapper>
   );
 }
