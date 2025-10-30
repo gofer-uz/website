@@ -1,0 +1,41 @@
+# Hello World Loyihasi
+
+Birinchi dasturimizni yozamiz - oddiy Hello World.
+
+```go filename="hello-world.go"
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("hello world")
+}
+```
+
+Bu kodni `.go` formatda saqlang, masalan `hello-world.go` yoki `main.go`.
+
+Ishga tushirish:
+
+```bash
+$ go run hello-world.go
+hello world
+```
+
+## Kompilyatsiya qilish
+
+Ba'zan dasturni alohida fayl qilib saqlash kerak. Buning uchun `go build` dan foydalanamiz:
+
+```bash
+$ go build hello-world.go
+$ ls
+hello-world    hello-world.go
+```
+
+Endi yaratilgan faylni to'g'ridan-to'g'ri ishga tushirsak bo'ladi:
+
+```bash
+$ ./hello-world
+hello world
+```
+
+Endi Go dasturlarini qanday ishga tushirish va kompilyatsiya qilishni bildik. Keyingi qismda go tilning ma'lumot turlari bilan tanishamiz.

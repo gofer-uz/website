@@ -1,0 +1,71 @@
+# O'zgaruvchilar
+
+Go da o'zgaruvchilar aniq e'lon qilinadi. Kompilyator ularning turini tekshiradi, masalan funksiya chaqirilganda.
+
+## E'lon qilish usullari
+
+**var** kalit so'zi bilan oddiy e'lon qilish:
+
+```go
+var a = "boshlang'ich"
+```
+
+Bir nechta o'zgaruvchini birga e'lon qilish:
+
+```go
+var b, c int = 1, 2
+```
+
+**Type inference** - Go o'zi turini aniqlaydi:
+
+```go
+var d = true  // Go buni boolean deb tushunadi
+```
+
+**:= operatori** - qisqaroq usul (faqat funksiya ichida):
+
+```go
+f := "apple"  // var f string = "apple" o'rniga
+```
+
+## Boshlang'ich qiymatlar
+
+Boshlang'ich qiymat bermasangiz, standart qiymat beriladi:
+- `int` uchun `0`
+- `string` uchun `""`
+- `boolean` uchun `false`
+- Boshqa turlar uchun ham o'z standart qiymatlari bor
+
+```go filename="variables.go"
+package main
+
+import "fmt"
+
+func main() {
+    var a = "boshlang'ich"
+    fmt.Println(a)
+
+    var b, c int = 1, 2
+    fmt.Println(b, c)
+
+    var d = true
+    fmt.Println(d)
+
+    var e int
+    fmt.Println(e)
+
+    f := "apple"
+    fmt.Println(f)
+}
+```
+
+Natija:
+
+```bash
+$ go run variables.go
+boshlang'ich
+1 2
+true
+0
+apple
+```

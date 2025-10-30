@@ -1,0 +1,40 @@
+# Ma'lumot turlari va qiymatlar
+
+Go da turli xil ma'lumot turlari bor: string, butun son, float, boolean va boshqalar.
+
+**String** - matnli ma'lumotlar. Ularni `+` bilan birlashtirish mumkin. String doimo `""` yoki `` ` ` `` ichida yoziladi.
+
+**Butun sonlar** - oddiy raqamlar: 1, 2, 100, -5.
+
+**Float** - kasr sonlar: 3.14, 7.0, -2.5.
+
+**Boolean** - mantiqiy qiymatlar: `true` yoki `false`. Ular bilan `&&` (va), `||` (yoki), `!` (inkor) operatorlaridan foydalanish mumkin.
+
+```go filename="values.go"
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("go" + "lang")
+
+    fmt.Println("1+1 =", 1+1)
+    fmt.Println("7.0/3.0 =", 7.0/3.0)
+
+    fmt.Println(true && false)
+    fmt.Println(true || false)
+    fmt.Println(!true)
+}
+```
+
+Natija:
+
+```bash
+$ go run values.go
+golang
+1+1 = 2
+7.0/3.0 = 2.3333333333333335
+false
+true
+false
+```

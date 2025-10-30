@@ -1,0 +1,245 @@
+# Go O'rnatish
+
+Go dasturlash tilini kompyuteringizga qanday o'rnatish mumkin.
+
+## Linux
+
+### Ubuntu/Debian
+
+Yangi versiyani o'rnatish:
+
+```bash
+# Faylni yuklab oling (masalan, 1.21.5 versiyasi)
+wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz
+
+# Eski versiyani o'chirib, yangisini o'rnating
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf go*.linux-amd64.tar.gz
+
+# Arxivni o'chirib tashlang
+rm go*.linux-amd64.tar.gz
+```
+
+`~/.bashrc` yoki `~/.zshrc` fayliga quyidagilarni yozing:
+
+```bash
+export PATH=$PATH:/usr/local/go/bin
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+```
+
+Keyin terminalni yoping va qayta oching, yoki quyidagini bajaring:
+
+```bash
+source ~/.bashrc
+# yoki
+source ~/.zshrc
+```
+
+### Fedora/CentOS
+
+```bash
+# Faylni yuklab oling
+wget https://go.dev/dl/go*.linux-amd64.tar.gz
+
+# O'rnating
+sudo tar -C /usr/local -xzf go*.linux-amd64.tar.gz
+
+# PATH ga qo'shing
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Arch Linux
+
+```bash
+# Oddiy o'rnatish
+sudo pacman -S go
+
+# yoki AUR orqali yangi versiya
+yay -S go
+```
+
+## macOS
+
+### Homebrew orqali
+
+```bash
+# Homebrew bo'lishi kerak
+brew install go
+```
+
+### Rasmiy dastur
+
+1. [go.dev/dl](https://go.dev/dl/) dan macOS uchun `.pkg` faylni yuklang
+2. Yuklab olingan faylni oching va ko'rsatmalarga amal qiling
+3. Go `/usr/local/go` papkasiga o'rnatiladi
+
+Ixtiyoriy, `~/.zshrc` yoki `~/.bash_profile` ga qo'shing:
+
+```bash
+export PATH=$PATH:/usr/local/go/bin
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+```
+
+## Windows
+
+### Oddiy o'rnatish
+
+1. [go.dev/dl](https://go.dev/dl/) dan Windows uchun `.msi` faylni yuklang
+2. Faylni oching va ko'rsatmalarga amal qiling
+3. Odatda `C:\Program Files\Go` ga o'rnatiladi
+
+## NixOS
+
+NixOS uchun bir necha yo'l bor:
+
+### 1. Butun tizimga o'rnatish
+
+`/etc/nixos/configuration.nix` fayliga qo'shing:
+
+```nix
+{ config, pkgs, ... }:
+
+{
+  environment.systemPackages = with pkgs; [
+    go
+  ];
+
+  # GOPATH sozlash (ixtiyoriy, ko'p holatda automatik sozlanadi)
+  environment.variables = {
+    GOPATH = "$HOME/go";
+  };
+}
+```
+
+Keyin tizimni yangilang:
+
+```bash
+sudo nixos-rebuild switch
+```
+
+### 2. Foydalanish uchun (nix-env)
+
+```bash
+# Go ni o'rnatish
+nix-env -iA nixpkgs.go
+
+# Qo'shimcha dasturlar
+nix-env -iA nixpkgs.gopls
+nix-env -iA nixpkgs.gotools
+```
+
+### 3. Home Manager
+
+`~/.config/nixpkgs/home.nix` da:
+
+```nix
+{ config, pkgs, ... }:
+
+{
+  home.packages = with pkgs; [
+    go
+  ];
+
+  home.sessionVariables = {
+    GOPATH = "${config.home.homeDirectory}/go";
+  };
+}
+```
+
+Keyin:
+
+```bash
+home-manager switch
+```
+
+### 4. Nix Shell (vaqtinchalik)
+
+Loyihangizda `shell.nix` yarating:
+
+```nix
+{ pkgs ? import <nixpkgs> {} }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    go
+  ];
+
+  shellHook = ''
+    export GOPATH=$HOME/go
+    export PATH=$PATH:$GOPATH/bin
+  '';
+}
+```
+
+Keyin:
+
+```bash
+nix-shell
+```
+
+### 5. Flakes bilan
+
+`flake.nix` yarating:
+
+```nix
+{
+  description = "Go development environment";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            go
+          ];
+
+          shellHook = ''
+            export GOPATH=$HOME/go
+            export PATH=$PATH:$GOPATH/bin
+          '';
+        };
+      }
+    );
+}
+```
+
+Keyin:
+
+```bash
+nix develop
+```
+
+## Tekshirish
+
+Go to'g'ri o'rnatilganini tekshirish:
+
+```bash
+go version
+```
+
+Natija:
+
+```
+go version go* linux/amd64
+```
+
+Go sozlamalarini ko'rish:
+
+```bash
+go env
+```
+
+
+
+Endi dasturlashni boshlashingiz mumkin.

@@ -1,5 +1,6 @@
 import { importPage } from "nextra/pages";
 import { useMDXComponents as getMDXComponents } from "../../mdx-components";
+import Giscus from "../../components/Giscus";
 import fs from "fs";
 import path from "path";
 
@@ -47,7 +48,8 @@ export async function generateMetadata(props: any) {
   return metadata;
 }
 
-const Wrapper = getMDXComponents().wrapper || (({ children }: any) => <>{children}</>);
+const Wrapper =
+  getMDXComponents().wrapper || (({ children }: any) => <>{children}</>);
 
 export default async function Page(props: any) {
   const params = await props.params;
@@ -57,9 +59,13 @@ export default async function Page(props: any) {
     metadata,
     sourceCode,
   } = await importPage(params.mdxPath);
+
+  const isMainPage = !params.mdxPath || params.mdxPath.length === 0;
+
   return (
     <Wrapper toc={toc} metadata={metadata} sourceCode={sourceCode}>
       <MDXContent {...props} params={params} />
+      {!isMainPage && <Giscus />}
     </Wrapper>
   );
 }

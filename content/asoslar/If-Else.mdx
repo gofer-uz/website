@@ -1,0 +1,76 @@
+# If/Else
+
+Go da shartli operatorlar `if` va `else` bilan yoziladi.
+
+**Muhim:** Go da shartlar atrofida qavs `()` kerak emas, lekin kod bloki uchun `{}` majburiy.
+
+## Oddiy if/else
+
+```go
+if 7%2 == 0 {
+    fmt.Println("7 juft")
+} else {
+    fmt.Println("7 toq")
+}
+```
+
+## Faqat if
+
+```go
+if 8%4 == 0 {
+    fmt.Println("8 4 ga qoldiqsiz bo'linadi")
+}
+```
+
+`else` majburiy emas.
+
+## If bilan o'zgaruvchi e'lon qilish
+
+```go
+if num := 9; num < 0 {
+    fmt.Println(num, "manfiy")
+} else if num < 10 {
+    fmt.Println(num, "bir xonali")
+} else {
+    fmt.Println(num, "bir nechta xonali")
+}
+```
+
+Shart oldidan o'zgaruvchi e'lon qilish mumkin. Bu o'zgaruvchi faqat `if/else` bloki ichida ishlaydi.
+
+## To'liq misol
+
+```go filename="if-else.go"
+package main
+
+import "fmt"
+
+func main() {
+    if 7%2 == 0 {
+        fmt.Println("7 juft")
+    } else {
+        fmt.Println("7 toq")
+    }
+
+    if 8%4 == 0 {
+        fmt.Println("8 4 ga qoldiqsiz bo'linadi")
+    }
+
+    if num := 9; num < 0 {
+        fmt.Println(num, "manfiy")
+    } else if num < 10 {
+        fmt.Println(num, "bir xonali")
+    } else {
+        fmt.Println(num, "bir nechta xonali")
+    }
+}
+```
+
+Natija:
+
+```bash
+$ go run if-else.go 
+7 toq
+8 4 ga qoldiqsiz bo'linadi
+9 bir xonali
+```

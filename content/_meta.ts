@@ -15,6 +15,10 @@ const meta: MetaRecord = {
     display: "hidden",
   },
   Boshlash: "Boshlash",
+  asoslar: "Asoslar",
+  "---": {
+    type: "separator",
+  },
   telegram: {
     title: "Telegram",
     type: "page",

@@ -1,0 +1,114 @@
+# For Loop
+
+Go da faqat bitta loop bor - `for`. Boshqa tillardagi misol JavaScriptdagi `while`, `do-while` ham `for` orqali amalga oshiriladi.
+
+## 1. Shartli loop (while kabi)
+
+```go
+i := 1
+for i <= 3 {
+    fmt.Println(i)
+    i = i + 1
+}
+```
+
+Shart `true` bo'lguncha davom etadi. Boshqa tillardagi `while` loopga o'xshaydi.
+
+## 2. Standaert for loop
+
+```go
+for j := 0; j < 3; j++ {
+    fmt.Println(j)
+}
+```
+
+Uchta qism: `boshlang'ich; shart; har safar, chaqirilgan funktsiya shart tugallanguncha`.
+
+## 3. Range bilan
+
+```go
+for i := range 3 {
+    fmt.Println("range", i)
+}
+```
+
+0 dan 3 gacha (3 kirmaydigan holda, lekin qadamlar 3ta) takrorlaydi.
+
+## 4. Cheksiz loop
+
+```go
+for {
+    fmt.Println("loop")
+    break  // break to'xtatish uchun
+}
+```
+
+Shartsiz `for` - cheksiz davom etadi. `break` yoki `return` bilan to'xtatiladi.
+
+## 5. Continue
+
+```go
+for n := range 6 {
+    if n%2 == 0 {
+        continue  // juft sonlarni o'tkazib yuborish
+    }
+    fmt.Println(n)
+}
+```
+
+`continue` joriy iteratsiyani o'tkazib, keyingisiga o'tadi.
+
+## To'liq misol
+
+```go filename="for.go"
+package main
+
+import "fmt"
+
+func main() {
+    i := 1
+    for i <= 3 {
+        fmt.Println(i)
+        i = i + 1
+    }
+
+    for j := 0; j < 3; j++ {
+        fmt.Println(j)
+    }
+
+    for i := range 3 {
+        fmt.Println("range", i)
+    }
+
+    for {
+        fmt.Println("loop")
+        break
+    }
+
+    for n := range 6 {
+        if n%2 == 0 {
+            continue
+        }
+        fmt.Println(n)
+    }
+}
+```
+
+Natija:
+
+```bash
+$ go run for.go
+1
+2
+3
+0
+1
+2
+range 0
+range 1
+range 2
+loop
+1
+3
+5
+```
