@@ -3,7 +3,7 @@
   "scripts": {
     "dev": "next",
     "build": "next build && npm run postbuild && touch out/.nojekyll",
-    "postbuild": "pagefind --site out",
+    "postbuild": "pagefind --site out --output-subdir _pagefind",
     "start": "next start",
     "deploy": "next build && npm run postbuild && touch out/.nojekyll"
   },

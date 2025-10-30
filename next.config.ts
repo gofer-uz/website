@@ -3,9 +3,9 @@ import { NextConfig } from "next";
 
 const withNextra = nextra({
   latex: true,
-  search: {
+  search: process.env.NODE_ENV === 'production' ? {
     codeblocks: false
-  },
+  } : false,
   contentDirBasePath: '/'
 });
 
