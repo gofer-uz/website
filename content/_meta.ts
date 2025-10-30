@@ -14,7 +14,6 @@ const meta: MetaRecord = {
     title: "Home",
     display: "hidden",
   },
-  Boshlash: "Boshlash",
   asoslar: "Asoslar",
   "---": {
     type: "separator",
