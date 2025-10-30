@@ -2,12 +2,10 @@
   "type": "module",
   "scripts": {
     "dev": "next",
-    "build": "next build && pagefind --site out && touch out/.nojekyll",
-    "build:static": "next build && touch out/.nojekyll",
+    "build": "next build && npm run postbuild && touch out/.nojekyll",
     "postbuild": "pagefind --site out",
     "start": "next start",
-    "export": "next export",
-    "deploy": "next build && pagefind --site out && touch out/.nojekyll"
+    "deploy": "next build && npm run postbuild && touch out/.nojekyll"
   },
   "dependencies": {
     "next": "^15.5.6",
