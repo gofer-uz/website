@@ -1,7 +1,45 @@
-import { generateStaticParamsFor, importPage } from "nextra/pages";
+import { importPage } from "nextra/pages";
 import { useMDXComponents as getMDXComponents } from "../../mdx-components";
+import fs from "fs";
+import path from "path";
 
-export const generateStaticParams = generateStaticParamsFor("mdxPath");
+function getAllMdxFiles(dir: string, baseDir: string = dir): string[][] {
+  const files: string[][] = [];
+  const items = fs.readdirSync(dir);
+
+  for (const item of items) {
+    if (item.startsWith("_") || item.startsWith(".")) continue;
+
+    const fullPath = path.join(dir, item);
+    const stat = fs.statSync(fullPath);
+
+    if (stat.isDirectory()) {
+      files.push(...getAllMdxFiles(fullPath, baseDir));
+    } else if (item.endsWith(".mdx") || item.endsWith(".md")) {
+      const relativePath = path.relative(baseDir, fullPath);
+      const pathSegments = relativePath
+        .replace(/\.(mdx|md)$/, "")
+        .split(path.sep);
+
+      if (pathSegments[pathSegments.length - 1] === "index") {
+        pathSegments.pop();
+      }
+
+      files.push(pathSegments);
+    }
+  }
+
+  return files;
+}
+
+export function generateStaticParams() {
+  const contentDir = path.join(process.cwd(), "content");
+  const allPaths = getAllMdxFiles(contentDir);
+
+  return allPaths.map((segments) => ({
+    mdxPath: segments,
+  }));
+}
 
 export async function generateMetadata(props: any) {
   const params = await props.params;

@@ -38,7 +38,7 @@
     "**/*.tsx",
     "next-env.d.ts",
     ".next/types/**/*.ts"
-  ],
+, "content/_metats"  ],
   "exclude": [
     "node_modules"
   ]
