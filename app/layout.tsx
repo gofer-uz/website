@@ -37,7 +37,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       >
         {/* Your additional tags should be passed as `children` of `<Head>` element */}
       </Head>
-      <body>
+      <body suppressHydrationWarning>
         <Layout
           // banner={banner}
           navbar={
