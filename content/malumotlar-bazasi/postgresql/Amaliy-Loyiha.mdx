@@ -4,7 +4,7 @@ Bu bo'limdagi hamma narsa — `pgxpool`, migratsiyalar, parametrli so'rovlar, `U
 
 Kodni klonlab, o'zingiz ishga tushirib ko'rishingiz mumkin:
 
-- Repo: [github.com/gofer-uz/auth-platform](https://github.com/gofer-uz/auth-platform)
+- Repo: [github.com/gofer-uz/examples/auth-platform](https://github.com/gofer-uz/examples/tree/main/auth-platform)
 - Batafsil maqola: [blog.gopher.uz](https://blog.gopher.uz)
 
 ## Loyiha tuzilishi
@@ -65,11 +65,11 @@ import (
     "log"
     "net/http"
 
-    "github.com/gofer-uz/auth-platform/internal/auth"
-    "github.com/gofer-uz/auth-platform/internal/config"
-    "github.com/gofer-uz/auth-platform/internal/database"
-    "github.com/gofer-uz/auth-platform/internal/httpapi"
-    "github.com/gofer-uz/auth-platform/internal/user"
+    "github.com/gofer-uz/examples/auth-platform/internal/auth"
+    "github.com/gofer-uz/examples/auth-platform/internal/config"
+    "github.com/gofer-uz/examples/auth-platform/internal/database"
+    "github.com/gofer-uz/examples/auth-platform/internal/httpapi"
+    "github.com/gofer-uz/examples/auth-platform/internal/user"
 )
 
 func main() {
@@ -102,8 +102,8 @@ Butun oqim shu yerda ko'rinadi: `pool` bir marta ochiladi va `defer pool.Close()
 Loyihani klonlab, ikki buyruq bilan ko'tarasiz:
 
 ```bash
-$ git clone https://github.com/gofer-uz/auth-platform
-$ cd auth-platform
+$ git clone https://github.com/gofer-uz/examples
+$ cd examples/auth-platform
 $ docker compose up -d          # postgres:16 ni ko'taradi
 $ export DATABASE_URL="postgres://gopher:secret@localhost:5432/auth"
 $ go run ./cmd/server
@@ -126,6 +126,6 @@ $ curl -s -X POST localhost:8080/api/auth/login \
 
 `register` ichida parol `bcrypt` bilan hashlanadi va `postgresRepository.Create` orqali `INSERT ... RETURNING id` bilan yoziladi — aynan [CRUD](/malumotlar-bazasi/postgresql/CRUD) da ko'rgan usul. `login` esa `ByEmail` bilan foydalanuvchini topadi, parolni tekshiradi va `sessions` jadvaliga yangi qator qo'shadi.
 
-Manba / batafsil: [github.com/gofer-uz/auth-platform](https://github.com/gofer-uz/auth-platform)
+Manba / batafsil: [github.com/gofer-uz/examples/auth-platform](https://github.com/gofer-uz/examples/tree/main/auth-platform)
 
 Bo'lim shu yerda yakunlanadi. Kodni klonlang, o'zgartiring, sindiring va qayta yig'ing — eng yaxshi o'rganish shu. MongoDB implementatsiyasini qo'shib ko'rish esa a'lo mashq: interfeys tayyor, faqat `mongo.go` yozish qoldi.
