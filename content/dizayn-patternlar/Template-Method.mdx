@@ -1,0 +1,66 @@
+# Template Method
+
+**Muammo:** bir necha jarayon umumiy skeletga ega, faqat ayrim qadamlari farq qiladi (hisobot yasash, ma'lumotni eksport qilish). Umumiy qismni takrorlamaslik, farqli qadamni esa moslashuvchan qoldirishni xohlaysiz.
+
+**G'oya:** klassik GoF'da bu abstrakt class va meros bilan qilinadi. Go da meros yo'q - o'zgaruvchan qadamni **funksiya maydoni** qilib beramiz. Umumiy skelet bitta metodda qoladi, farqli qadam tashqaridan uzatiladi.
+
+```go filename="template.go"
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+// Umumiy skelet - Generate; o'zgaruvchan qadam - Format maydoni.
+type Report struct {
+	Title  string
+	Format func(row string) string
+}
+
+func (r Report) Generate(rows []string) string {
+	var sb strings.Builder
+	sb.WriteString("=== " + r.Title + " ===\n") // umumiy qadam
+	for _, row := range rows {
+		sb.WriteString(r.Format(row) + "\n") // o'zgaruvchan qadam
+	}
+	fmt.Fprintf(&sb, "Jami: %d qator\n", len(rows)) // umumiy qadam
+	return sb.String()
+}
+
+func main() {
+	rows := []string{"olma", "anor", "uzum"}
+
+	plain := Report{
+		Title:  "Oddiy",
+		Format: func(row string) string { return "- " + row },
+	}
+	fmt.Print(plain.Generate(rows))
+
+	upper := Report{
+		Title:  "Katta harf",
+		Format: func(row string) string { return "* " + strings.ToUpper(row) },
+	}
+	fmt.Print(upper.Generate(rows))
+}
+```
+
+```bash
+$ go run template.go
+=== Oddiy ===
+- olma
+- anor
+- uzum
+Jami: 3 qator
+=== Katta harf ===
+* OLMA
+* ANOR
+* UZUM
+Jami: 3 qator
+```
+
+Skelet (`Generate`) bir marta yozildi; ikkala hisobot faqat `Format` qadami bilan farq qiladi - meros ham, abstrakt class ham kerak bo'lmadi.
+
+**Qachon:** umumiy oqim + almashinadigan qadamlar bo'lganda. Go note: bu Go'ning meros o'rniga funksiya qiymatidan foydalanadigan idiomatik yechimidir; ko'p qadam bo'lsa, `struct`ga bir necha `func` maydon qo'yiladi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/template-method](https://refactoring.guru/design-patterns/template-method/go/example)

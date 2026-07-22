@@ -1,0 +1,47 @@
+# Generics — kirish
+
+Go 1.18 gacha bir muammo bor edi: bir xil logikani turli tur (type) uchun qayta-qayta yozishga to'g'ri kelardi. `int` slice'ining eng kattasini topadigan funksiya yozdingiz — endi `float64` uchun ham, `string` uchun ham xuddi shuni nusxalaysiz. Muqobil yo'l — `interface{}` (ya'ni `any`) — turni yo'qotib, ish vaqtida (runtime) `type assertion` qilishga majbur qiladi va xatoni faqat panic paytida ko'rasiz.
+
+Generics buni hal qiladi: funksiyani bir marta yozib, tur nomini o'zgaruvchidek — **type parameter** ko'rinishida qabul qilamiz. Hammasi kompilyatsiya vaqtida tekshiriladi.
+
+```go filename="first-generic.go"
+package main
+
+import (
+    "cmp"
+    "fmt"
+)
+
+// T — type parameter. cmp.Ordered uni solishtirsa bo'ladigan
+// turlar (int, float, string) bilan cheklaydi.
+func Max[T cmp.Ordered](nums []T) T {
+    m := nums[0]
+    for _, n := range nums[1:] {
+        if n > m {
+            m = n
+        }
+    }
+    return m
+}
+
+func main() {
+    fmt.Println(Max([]int{3, 9, 2}))
+    fmt.Println(Max([]float64{1.5, 0.2, 4.8}))
+    fmt.Println(Max([]string{"olma", "banan", "anor"}))
+}
+```
+
+```bash
+$ go run first-generic.go
+9
+4.8
+olma
+```
+
+Bitta funksiya, uchta har xil tur — nusxalashsiz, `interface{}` xavfisiz.
+
+**Xulosa:** generics kod nusxalash va `interface{}` o'rniga tur xavfsizligini kompilyatsiya vaqtida beradi.
+
+Manba / batafsil: [go.dev/doc/tutorial/generics](https://go.dev/doc/tutorial/generics)
+
+Keyingi bo'limda [type parametrlar](/generics/Type-Parametrlar) sintaksisini batafsil ko'ramiz.

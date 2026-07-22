@@ -1,0 +1,74 @@
+# Table-driven testlar
+
+Bitta funksiyani puxta sinash uchun ko'p holat kerak bo'ladi: oddiy holat, chegara holati, xato holat... Har biriga alohida `TestXxx` yozsak, kod takrorlanaveradi. Go'da buning odatiy yechimi — **table-driven test**: barcha test holatlarini bitta jadval (slice) qilib yig'ib, bitta tsikl bilan hammasidan o'tamiz. Har bir holatni `t.Run` bilan alohida **subtest** qilib qo'ysak, biror holat fail bo'lganda qaysi biri ekani darrov ko'rinadi va `-run` orqali aynan o'shani ishga tushira olamiz.
+
+```go filename="palindrome.go"
+package main
+
+// IsPalindrome satr teskari o'qilganda ham bir xil bo'lsa true qaytaradi.
+func IsPalindrome(s string) bool {
+    r := []rune(s)
+    for i, j := 0, len(r)-1; i < j; i, j = i+1, j-1 {
+        if r[i] != r[j] {
+            return false
+        }
+    }
+    return true
+}
+```
+
+```go filename="palindrome_test.go"
+package main
+
+import "testing"
+
+func TestIsPalindrome(t *testing.T) {
+    // Har bir holat: nom, kirish, kutilgan natija.
+    tests := []struct {
+        name  string
+        input string
+        want  bool
+    }{
+        {"bosh_satr", "", true},
+        {"oddiy", "kok", true},
+        {"emas", "salom", false},
+        {"juft_uzunlik", "abba", true},
+        {"raqamlar", "12321", true},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) { // har holat — alohida subtest
+            got := IsPalindrome(tt.input)
+            if got != tt.want {
+                t.Errorf("IsPalindrome(%q) = %v; kutilgan %v", tt.input, got, tt.want)
+            }
+        })
+    }
+}
+```
+
+```bash
+$ go test -v -run TestIsPalindrome
+=== RUN   TestIsPalindrome
+=== RUN   TestIsPalindrome/bosh_satr
+=== RUN   TestIsPalindrome/oddiy
+=== RUN   TestIsPalindrome/emas
+=== RUN   TestIsPalindrome/juft_uzunlik
+=== RUN   TestIsPalindrome/raqamlar
+--- PASS: TestIsPalindrome (0.00s)
+    --- PASS: TestIsPalindrome/bosh_satr (0.00s)
+    --- PASS: TestIsPalindrome/oddiy (0.00s)
+    --- PASS: TestIsPalindrome/emas (0.00s)
+    --- PASS: TestIsPalindrome/juft_uzunlik (0.00s)
+    --- PASS: TestIsPalindrome/raqamlar (0.00s)
+PASS
+ok      example/palindrome  0.003s
+```
+
+Yangi chegara holati topsangiz — jadvalga bitta qator qo'shasiz, xolos; test mantig'i o'zgarmaydi. Aynan bittasini slash orqali ishga tushirasiz: `go test -run TestIsPalindrome/emas`.
+
+**Xulosa:** holatlarni struct slice qiling, har birini `t.Run(tt.name, ...)` bilan subtest qiling — Go'da eng qulay va oson kengaytiriladigan test uslubi shu.
+
+Manba / batafsil: [go.dev/wiki/TableDrivenTests](https://go.dev/wiki/TableDrivenTests)
+
+Keyingi bo'limda kod tezligini o'lchashni — [benchmarklar](/testlash/Benchmarklar) bilan tanishamiz.

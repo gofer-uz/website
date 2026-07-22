@@ -1,0 +1,71 @@
+# Pipeline
+
+**Muammo:** ma'lumotni bir necha bosqichdan ketma-ket o'tkazish kerak (yaratish, o'zgartirish, filtrlash), va buni parallel, oqim (streaming) ko'rinishida qilish yaxshi bo'lardi - hammasini xotiraga yig'masdan.
+
+**G'oya:** har bir bosqich alohida `goroutine` bo'lib, kirish `channel`idan o'qiydi, ishlov beradi va chiqish `channel`iga yozadi. Bosqichlarni ulasangiz, ma'lumot ular bo'ylab oqib o'tadi. Bu Go'ning concurrency asosidagi kompozitsiyasi.
+
+```go filename="pipeline.go"
+package main
+
+import "fmt"
+
+// generate - sonlarni channelga uzatuvchi manba.
+func generate(nums ...int) <-chan int {
+	out := make(chan int)
+	go func() {
+		defer close(out)
+		for _, n := range nums {
+			out <- n
+		}
+	}()
+	return out
+}
+
+// square - har bir sonni kvadratga oshiradi.
+func square(in <-chan int) <-chan int {
+	out := make(chan int)
+	go func() {
+		defer close(out)
+		for n := range in {
+			out <- n * n
+		}
+	}()
+	return out
+}
+
+// filterOdd - faqat toq sonlarni o'tkazadi.
+func filterOdd(in <-chan int) <-chan int {
+	out := make(chan int)
+	go func() {
+		defer close(out)
+		for n := range in {
+			if n%2 == 1 {
+				out <- n
+			}
+		}
+	}()
+	return out
+}
+
+func main() {
+	// Bosqichlarni ulaymiz; har biri channel qaytaradi.
+	pipe := filterOdd(square(generate(1, 2, 3, 4, 5)))
+
+	for n := range pipe {
+		fmt.Println(n)
+	}
+}
+```
+
+```bash
+$ go run pipeline.go
+1
+9
+25
+```
+
+`1..5` kvadratga oshdi (`1 4 9 16 25`), keyin toqlari o'tdi (`1 9 25`). Har bir bosqich mustaqil `goroutine`da, ma'lumotni oqim ko'rinishida uzatadi.
+
+**Qachon:** ketma-ket ishlov beradigan oqimlar (fayl, tarmoq, hodisalar) uchun. Go note: `channel` yopilishi (`close`) va `range` tabiiy ravishda pipeline'ni to'xtatadi; katta yuklamada bosqichlarni bir necha `goroutine`ga tarqatish (fan-out/fan-in) mumkin.
+
+Manba / batafsil: [go.dev/blog/pipelines](https://go.dev/blog/pipelines)

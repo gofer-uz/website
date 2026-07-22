@@ -1,0 +1,89 @@
+# Daraxtlar
+
+Daraxt (tree) - ierarxik tuzilma: yuqorida bitta ildiz (root) tugun, har tugun ostida bolalari. Binary tree da har tugunda ko'pi bilan ikkita bola bo'ladi - chap va o'ng. Eng foydali turi - binary search tree (BST): unda har tugun uchun chapdagi barcha qiymatlar undan kichik, o'ngdagilari esa katta. Ana shu qoida tufayli qidiruv har qadamda yarmini tashlab yuboradi va `O(log n)` da ishlaydi (agar daraxt muvozanatli bo'lsa).
+
+## Murakkablik (muvozanatli BST)
+
+| Amal | O'rtacha | Eng yomon* |
+| --- | --- | --- |
+| Qidiruv | `O(log n)` | `O(n)` |
+| Qo'shish | `O(log n)` | `O(n)` |
+| Inorder aylanish | `O(n)` | `O(n)` |
+
+*Elementlar allaqachon tartiblangan holda qo'shilsa, daraxt bir tomonga cho'zilib "zanjir"ga aylanadi va `O(n)` bo'lib qoladi. Buning oldini olish uchun AVL yoki red-black tree kabi o'zini muvozanatlab turadigan turlardan foydalaniladi.
+
+## BST Go da
+
+```go filename="bst.go"
+package main
+
+import "fmt"
+
+type Node struct {
+    Val         int
+    Left, Right *Node
+}
+
+// O(log n): tartib qoidasiga ko'ra joyga qo'yadi
+func (n *Node) Insert(v int) *Node {
+    if n == nil {
+        return &Node{Val: v}
+    }
+    if v < n.Val {
+        n.Left = n.Left.Insert(v)
+    } else if v > n.Val {
+        n.Right = n.Right.Insert(v)
+    }
+    return n
+}
+
+// O(log n): bor-yo'qligini tekshiradi
+func (n *Node) Search(v int) bool {
+    if n == nil {
+        return false
+    }
+    if v == n.Val {
+        return true
+    }
+    if v < n.Val {
+        return n.Left.Search(v)
+    }
+    return n.Right.Search(v)
+}
+
+// Inorder: chap -> node -> o'ng => o'sish tartibida chiqadi
+func (n *Node) Inorder(out *[]int) {
+    if n == nil {
+        return
+    }
+    n.Left.Inorder(out)
+    *out = append(*out, n.Val)
+    n.Right.Inorder(out)
+}
+
+func main() {
+    var root *Node
+    for _, v := range []int{5, 3, 8, 1, 4, 7, 9} {
+        root = root.Insert(v)
+    }
+
+    var sorted []int
+    root.Inorder(&sorted)
+    fmt.Println("inorder:", sorted)
+    fmt.Println("7 bormi?", root.Search(7))
+    fmt.Println("6 bormi?", root.Search(6))
+}
+```
+
+```bash
+$ go run bst.go
+inorder: [1 3 4 5 7 8 9]
+7 bormi? true
+6 bormi? false
+```
+
+E'tibor bering: BST ni inorder tartibda aylansangiz, qiymatlar o'z-o'zidan saralangan holda chiqadi. Daraxtning yashirin kuchi ana shunda.
+
+**Xulosa:** BST tartiblangan qidiruvni `O(log n)` da beradi, lekin muvozanat buzilsa sekinlashib qoladi.
+
+**Manba / batafsil:** [Binary Search Tree - Wikipedia](https://en.wikipedia.org/wiki/Binary_search_tree)

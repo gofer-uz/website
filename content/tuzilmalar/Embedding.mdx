@@ -1,0 +1,75 @@
+# Embedding
+
+Go'da meros (inheritance) yo'q — uning o'rniga **kompozitsiya** ishlatiladi. Embedding shunaqa ishlaydi: bitta `struct`ni ikkinchisining ichiga nom bermay joylashtirasiz, shunda uning maydonlari (field) va metodlari xuddi tashqi `struct`niki bo'lib qoladi. Buni "method promotion" deb atashadi.
+
+```go filename="embed.go"
+package main
+
+import "fmt"
+
+type Engine struct {
+    Power int
+}
+
+func (e Engine) Start() {
+    fmt.Printf("Dvigatel ishga tushdi (%d ot kuchi)\n", e.Power)
+}
+
+type Car struct {
+    Engine // embedded - maydon nomi yo'q
+    Brand  string
+}
+
+func main() {
+    c := Car{Engine: Engine{Power: 150}, Brand: "Chevrolet"}
+
+    c.Start()             // metod Engine dan ko'tarildi
+    fmt.Println(c.Power)  // maydon ham ko'tarildi
+    fmt.Println(c.Brand)
+}
+```
+
+```bash
+$ go run embed.go
+Dvigatel ishga tushdi (150 ot kuchi)
+150
+Chevrolet
+```
+
+Xulosa: `Car` `Engine`ni meros qilib olgani yo'q — uni o'z ichiga oldi, xolos. Uning maydon va metodlari esa `c.Power`, `c.Start()` bo'lib yuqoriga "ko'tarildi". Agar tashqi `struct`da xuddi shu nomli metod bo'lsa, o'sha ustun turadi.
+
+Interfeyslarni (interface) ham bir-birining ichiga joylashtirish mumkin — kichiklaridan kattaroq interfeys yig'iladi (standart kutubxonadagi `io.ReadWriter` aynan shunday tuzilgan):
+
+```go filename="iface-embed.go"
+package main
+
+import "fmt"
+
+type Reader interface{ Read() string }
+type Writer interface{ Write(s string) }
+
+type ReadWriter interface { // ikkalasini birlashtiradi
+    Reader
+    Writer
+}
+
+type Buffer struct{ data string }
+
+func (b *Buffer) Read() string  { return b.data }
+func (b *Buffer) Write(s string) { b.data = s }
+
+func main() {
+    var rw ReadWriter = &Buffer{}
+    rw.Write("embedding kuchli")
+    fmt.Println(rw.Read())
+}
+```
+
+```bash
+$ go run iface-embed.go
+embedding kuchli
+```
+
+Xulosa: `*Buffer` ikkala interfeysning metodlarini ham yozgan, shu bois birlashgan `ReadWriter`ni to'liq qondiradi.
+
+Manba / batafsil: [Effective Go — Embedding](https://go.dev/doc/effective_go#embedding)

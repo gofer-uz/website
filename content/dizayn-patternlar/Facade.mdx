@@ -1,0 +1,68 @@
+# Facade
+
+**Muammo:** biror amalni bajarish uchun bir necha murakkab quyi tizim bilan to'g'ri tartibda gaplashish kerak. Chaqiruvchi kod bu tafsilotlarga botib qolmasin.
+
+**G'oya:** hammasini bitta soddadan interfeys - facade - ortiga yashirasiz. Chaqiruvchi bitta metod chaqiradi, facade esa ichkarida kerakli qadamlarni o'zi bajaradi.
+
+```go filename="facade.go"
+package main
+
+import "fmt"
+
+type inventory struct{}
+
+func (inventory) reserve(item string) bool {
+	fmt.Printf("inventar: %q zaxiraga olindi\n", item)
+	return true
+}
+
+type payment struct{}
+
+func (payment) charge(amount int) bool {
+	fmt.Printf("to'lov: %d so'm yechildi\n", amount)
+	return true
+}
+
+type shipping struct{}
+
+func (shipping) send(item, address string) {
+	fmt.Printf("yetkazish: %q -> %s\n", item, address)
+}
+
+// OrderFacade uchtasini bitta metod ortiga yashiradi.
+type OrderFacade struct {
+	inv  inventory
+	pay  payment
+	ship shipping
+}
+
+func (f OrderFacade) PlaceOrder(item, address string, amount int) {
+	if !f.inv.reserve(item) {
+		return
+	}
+	if !f.pay.charge(amount) {
+		return
+	}
+	f.ship.send(item, address)
+	fmt.Println("buyurtma yakunlandi")
+}
+
+func main() {
+	facade := OrderFacade{}
+	facade.PlaceOrder("Go kitobi", "Toshkent", 120000)
+}
+```
+
+```bash
+$ go run facade.go
+inventar: "Go kitobi" zaxiraga olindi
+to'lov: 120000 so'm yechildi
+yetkazish: "Go kitobi" -> Toshkent
+buyurtma yakunlandi
+```
+
+`main` uchta quyi tizimni ko'rmaydi - u faqat `PlaceOrder`ni biladi.
+
+**Qachon:** murakkab tizimga sodda "kirish eshigi" kerak bo'lganda. Go note: paket darajasida ham facade tez-tez uchraydi - `net/http.Get` ichida transport, ulanish, so'rovni yasashni yashiradi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/facade](https://refactoring.guru/design-patterns/facade/go/example)

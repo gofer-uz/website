@@ -1,0 +1,49 @@
+# Type parametrlar
+
+Oddiy funksiya qiymatlarni parametr qiladi, generic funksiya esa **turlarni** ham. Ular funksiya nomidan keyin kvadrat qavsda yoziladi: `func Nomi[T any](arg T) T`. Bu yerda `T` — tur uchun nom (odatda `T`, `K`, `V`), `any` esa constraint — "istalgan tur bo'laveradi".
+
+Eng muhim qulaylik — **type inference**: agar turni argumentdan aniqlash mumkin bo'lsa, uni qo'lda yozish shart emas (`O'zgaruvchilar` bo'limidagi `:=` bilan bir xil g'oya). Quyida `Map` — bir slice'ni boshqa turdagi slice'ga aylantiradi; kirish turi `T`, chiqish turi `U` alohida:
+
+```go filename="map.go"
+package main
+
+import (
+    "fmt"
+    "strconv"
+)
+
+// Map: []T ni []U ga aylantiradi. Ikkita type parameter — T va U.
+func Map[T, U any](s []T, f func(T) U) []U {
+    result := make([]U, len(s))
+    for i, v := range s {
+        result[i] = f(v)
+    }
+    return result
+}
+
+func main() {
+    nums := []int{1, 2, 3, 4}
+
+    // Type inference: T=int, U=int — qo'lda yozmadik
+    squares := Map(nums, func(n int) int { return n * n })
+    fmt.Println(squares)
+
+    // T=int, U=string
+    strs := Map(nums, func(n int) string { return "#" + strconv.Itoa(n) })
+    fmt.Println(strs)
+}
+```
+
+```bash
+$ go run map.go
+[1 4 9 16]
+[#1 #2 #3 #4]
+```
+
+Chaqiriqda `Map[int, int]` yoki `Map[int, string]` yozmadik — Go turlarni argumentlardan o'zi aniqladi. Aniq `[int]` faqat Go turni aniqlay olmaganda (masalan tur faqat qaytish qiymatida uchrasa) kerak bo'ladi.
+
+**Xulosa:** type parameter'lar `[T any]` shaklida keladi; amalda deyarli har doim type inference tufayli turni qo'lda yozmaysiz.
+
+Manba / batafsil: [go.dev/ref/spec#Type_parameter_declarations](https://go.dev/ref/spec#Type_parameter_declarations)
+
+Keyingi bo'limda `T` ni [constraint](/generics/Constraintlar) bilan cheklashni ko'ramiz.

@@ -1,0 +1,162 @@
+# Saralash
+
+Saralash (sorting) - elementlarni ma'lum tartibda (odatda o'sish bo'yicha) joylashtirish. O'nlab algoritmi bor, lekin ular ikki guruhga bo'linadi: o'qitish uchun soddalari (`O(n^2)`) va amalda ishlatiladigan tezlari (`O(n log n)`). Amalda ularni o'zingiz yozmaysiz - Go ning `slices.Sort` idan foydalanasiz. Baribir ichida nima ketayotganini bilish - muhandislik madaniyatining bir qismi.
+
+## Murakkablik
+
+| Algoritm | O'rtacha | Eng yomon | Barqaror? |
+| --- | --- | --- | --- |
+| Bubble sort | `O(n^2)` | `O(n^2)` | ha |
+| Insertion sort | `O(n^2)` | `O(n^2)` | ha |
+| Quicksort | `O(n log n)` | `O(n^2)` | yo'q |
+| Mergesort | `O(n log n)` | `O(n log n)` | ha |
+
+## O'qitish uchun: bubble va insertion
+
+```go filename="teaching.go"
+package main
+
+import "fmt"
+
+// Bubble: qo'shni juftlarni almashtirib, kattalarni "ko'taradi"
+func bubbleSort(a []int) {
+    for i := 0; i < len(a); i++ {
+        for j := 0; j < len(a)-1-i; j++ {
+            if a[j] > a[j+1] {
+                a[j], a[j+1] = a[j+1], a[j]
+            }
+        }
+    }
+}
+
+// Insertion: har elementni chapdagi tartiblangan qismga joylaydi
+func insertionSort(a []int) {
+    for i := 1; i < len(a); i++ {
+        key, j := a[i], i-1
+        for j >= 0 && a[j] > key {
+            a[j+1] = a[j]
+            j--
+        }
+        a[j+1] = key
+    }
+}
+
+func main() {
+    a := []int{5, 2, 8, 1, 9, 3}
+    bubbleSort(a)
+    fmt.Println("bubble: ", a)
+
+    b := []int{5, 2, 8, 1, 9, 3}
+    insertionSort(b)
+    fmt.Println("insertion:", b)
+}
+```
+
+```bash
+$ go run teaching.go
+bubble:  [1 2 3 5 8 9]
+insertion: [1 2 3 5 8 9]
+```
+
+## Amaliy: quicksort va mergesort
+
+Quicksort bitta "pivot" tanlaydi, undan kichiklarni chapga, kattalarni o'ngga bo'ladi, so'ng har qismni rekursiv saralaydi. Mergesort ro'yxatni ikkiga bo'lib, har yarmini saralab, keyin ikkisini birlashtiradi.
+
+```go filename="fast.go"
+package main
+
+import "fmt"
+
+func quicksort(a []int) []int {
+    if len(a) <= 1 {
+        return a
+    }
+    pivot := a[len(a)/2]
+    var less, equal, greater []int
+    for _, v := range a {
+        switch {
+        case v < pivot:
+            less = append(less, v)
+        case v > pivot:
+            greater = append(greater, v)
+        default:
+            equal = append(equal, v)
+        }
+    }
+    return append(append(quicksort(less), equal...), quicksort(greater)...)
+}
+
+func mergesort(a []int) []int {
+    if len(a) <= 1 {
+        return a
+    }
+    mid := len(a) / 2
+    left := mergesort(a[:mid])
+    right := mergesort(a[mid:])
+    // merge
+    res := make([]int, 0, len(a))
+    i, j := 0, 0
+    for i < len(left) && j < len(right) {
+        if left[i] <= right[j] {
+            res = append(res, left[i])
+            i++
+        } else {
+            res = append(res, right[j])
+            j++
+        }
+    }
+    res = append(res, left[i:]...)
+    return append(res, right[j:]...)
+}
+
+func main() {
+    fmt.Println("quick:", quicksort([]int{5, 2, 8, 1, 9, 3}))
+    fmt.Println("merge:", mergesort([]int{5, 2, 8, 1, 9, 3}))
+}
+```
+
+```bash
+$ go run fast.go
+quick: [1 2 3 5 8 9]
+merge: [1 2 3 5 8 9]
+```
+
+## Amalda: slices.Sort
+
+Real kodda quyidagini yozing, bas:
+
+```go filename="real.go"
+package main
+
+import (
+    "fmt"
+    "slices"
+    "sort"
+)
+
+func main() {
+    a := []int{5, 2, 8, 1, 9, 3}
+    slices.Sort(a) // O(n log n), Go 1.21+
+    fmt.Println(a)
+
+    // maxsus tartib uchun
+    people := []struct {
+        Name string
+        Age  int
+    }{{"Ali", 30}, {"Vali", 25}, {"Guli", 28}}
+    sort.Slice(people, func(i, j int) bool {
+        return people[i].Age < people[j].Age
+    })
+    fmt.Println(people)
+}
+```
+
+```bash
+$ go run real.go
+[1 2 3 5 8 9]
+[{Vali 25} {Guli 28} {Ali 30}]
+```
+
+**Xulosa:** Algoritmlarni tushunish uchun o'rganing, lekin ishda `slices.Sort` / `sort.Slice` ni ishlating.
+
+**Manba / batafsil:** [slices package - pkg.go.dev](https://pkg.go.dev/slices)

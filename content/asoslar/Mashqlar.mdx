@@ -1,0 +1,238 @@
+# Mashqlar
+
+Bu bo'lim o'rgangan asoslarni mustahkamlash uchun. Har bir masalani avval o'zingiz yeching — kodni yozib, natijasini tekshiring — shundan keyingina "Yechimni ko'rish" tugmasini bosing. Tayyor yechimga ko'z tashlab qo'yish oson, lekin haqiqiy o'rganish qo'lda yozib ko'rganda bo'ladi.
+
+## 1. Ikki o'zgaruvchini almashtirish
+
+`a` va `b` degan ikkita `int` o'zgaruvchi oling. Uchinchi (vaqtinchalik) o'zgaruvchiga qo'l urmasdan ularning qiymatlarini almashtiring. Masalan `a = 3`, `b = 7` bo'lsa, oxirida `a = 7`, `b = 3` chiqsin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    a, b := 3, 7
+    a, b = b, a // Go bir qatorda almashtiradi
+    fmt.Println(a, b)
+}
+```
+
+Natija:
+
+```bash
+7 3
+```
+
+</details>
+
+## 2. Juft sonlar yig'indisi
+
+`n` butun son berilgan. `1` dan `n` gacha (o'zini ham qo'shib) bo'lgan barcha **juft** sonlar yig'indisini `for` loop bilan hisoblang. `n = 10` uchun natija `2 + 4 + 6 + 8 + 10 = 30`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    n := 10
+    sum := 0
+    for i := 1; i <= n; i++ {
+        if i%2 == 0 {
+            sum += i
+        }
+    }
+    fmt.Println(sum)
+}
+```
+
+Natija:
+
+```bash
+30
+```
+
+</details>
+
+## 3. Slice ni teskari aylantirish
+
+Butun sonlardan iborat `slice` oling va uni **joyida** (yangi slice yaratmagan holda) teskari tartibga keltiring. `[]int{1, 2, 3, 4, 5}` uchun natija `[5 4 3 2 1]` bo'lishi kerak.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    s := []int{1, 2, 3, 4, 5}
+    for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+        s[i], s[j] = s[j], s[i]
+    }
+    fmt.Println(s)
+}
+```
+
+Natija:
+
+```bash
+[5 4 3 2 1]
+```
+
+</details>
+
+## 4. So'zlar chastotasi
+
+Bir nechta so'zdan iborat `slice` oling. Har bir so'z necha marta uchraganini `map` da sanang. `["olma", "nok", "olma", "uzum", "olma"]` uchun `olma` uch marta, `nok` bilan `uzum` esa bir martadan uchraydi.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "sort"
+)
+
+func main() {
+    words := []string{"olma", "nok", "olma", "uzum", "olma"}
+    count := map[string]int{}
+    for _, w := range words {
+        count[w]++
+    }
+
+    // barqaror chiqish uchun kalitlarni tartiblaymiz
+    keys := make([]string, 0, len(count))
+    for k := range count {
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
+    for _, k := range keys {
+        fmt.Printf("%s: %d\n", k, count[k])
+    }
+}
+```
+
+Natija:
+
+```bash
+nok: 1
+olma: 3
+uzum: 1
+```
+
+</details>
+
+## 5. Closure bilan hisoblagich
+
+Har chaqirilganda o'ziga berilgan sonni ustiga qo'shib borib, joriy yig'indini qaytaradigan closure yozing. `accumulator` funksiyasi `func() func(int) int` qaytarsin: `acc := accumulator()` dan keyin `acc(10)` → `10`, `acc(5)` → `15`, `acc(3)` → `18`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func accumulator() func(int) int {
+    sum := 0
+    return func(x int) int {
+        sum += x // tashqi sum ni "eslab qoladi"
+        return sum
+    }
+}
+
+func main() {
+    acc := accumulator()
+    fmt.Println(acc(10))
+    fmt.Println(acc(5))
+    fmt.Println(acc(3))
+}
+```
+
+Natija:
+
+```bash
+10
+15
+18
+```
+
+</details>
+
+## 6. Pointer orqali almashtirish
+
+Endi 1-mashqni funksiyaga ko'chiring. `swap(a, b *int)` funksiyasi ikki `int` ning **manzilini** qabul qilib, qiymatlarini almashtirsin — shunda o'zgarish `main` da ham ko'rinadi.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func swap(a, b *int) {
+    *a, *b = *b, *a // manzil orqali asl qiymatlarni almashtiramiz
+}
+
+func main() {
+    x, y := 3, 7
+    swap(&x, &y)
+    fmt.Println(x, y)
+}
+```
+
+Natija:
+
+```bash
+7 3
+```
+
+</details>
+
+## 7. Rekursiya bilan faktorial
+
+`n!` (faktorial) ni **rekursiya** bilan hisoblaydigan `fact(n int) int` funksiyasini yozing. Bazaviy holatni unutmang: `0! = 1`. `fact(5)` `120` qaytarishi kerak.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func fact(n int) int {
+    if n == 0 { // bazaviy holat - rekursiyani to'xtatadi
+        return 1
+    }
+    return n * fact(n-1)
+}
+
+func main() {
+    fmt.Println(fact(5))
+}
+```
+
+Natija:
+
+```bash
+120
+```
+
+</details>
+
+Hammasini o'zingiz yechib chiqqan bo'lsangiz — asoslarni egalladingiz. Keyingi bo'lim `tuzilmalar` da `struct`, `metod` va `interface` bilan tanishamiz.

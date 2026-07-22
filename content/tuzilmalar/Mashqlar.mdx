@@ -1,0 +1,284 @@
+# Mashqlar
+
+Bu bo'lim tuzilmalarni — `struct`, metod, interfeys, embedding va `iota`ni — mustahkamlash uchun. Har bir masalani avval o'zingiz yeching, kodni ishga tushirib natijani tekshiring, keyin yechimga qarang.
+
+## 1. Struct va uning maydonlari
+
+`Rectangle` degan `struct` yasang: ichida `Width` va `Height` bo'lsin (ikkalasi ham `int`). Uni to'ldiring, `Width`ni boshqa qiymatga o'zgartiring va maydonlarni chop eting.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Rectangle struct {
+    Width  int
+    Height int
+}
+
+func main() {
+    r := Rectangle{Width: 3, Height: 4}
+    r.Width = 10 // maydonni o'zgartiramiz
+    fmt.Println(r.Width, r.Height)
+}
+```
+
+Natija:
+
+```bash
+10 4
+```
+
+</details>
+
+## 2. Metod qo'shish
+
+1-mashqdagi `Rectangle`ga `Area() int` metodini qo'shing — u yuzani (`Width * Height`) qaytarsin. Value receiver ishlating.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Rectangle struct {
+    Width  int
+    Height int
+}
+
+func (r Rectangle) Area() int {
+    return r.Width * r.Height
+}
+
+func main() {
+    r := Rectangle{Width: 3, Height: 4}
+    fmt.Println(r.Area())
+}
+```
+
+Natija:
+
+```bash
+12
+```
+
+</details>
+
+## 3. Pointer receiver bilan o'zgartirish
+
+`Counter` `struct`ida `Value int` maydoni bo'lsin. `Inc()` metodini **pointer receiver** bilan yozing — u har safar chaqirilganda `Value`ni `1`ga oshirsin. Uch marta chaqirib, natijani tekshiring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Counter struct {
+    Value int
+}
+
+func (c *Counter) Inc() { // pointer receiver - asl qiymat o'zgaradi
+    c.Value++
+}
+
+func main() {
+    c := Counter{}
+    c.Inc()
+    c.Inc()
+    c.Inc()
+    fmt.Println(c.Value)
+}
+```
+
+Natija:
+
+```bash
+3
+```
+
+</details>
+
+## 4. Interface va polimorfizm
+
+`Shape` interfeysini yasang — unda faqat `Area() float64` metodi bo'lsin. `Circle` (`R float64`) va `Square` (`Side float64`) turlarini shu interfeysga moslang. Ularni bitta `[]Shape` ichiga solib, har birining yuzasini chop eting. `Circle{2}` uchun yuza `math.Pi * 4`, `Square{3}` uchun esa `9` chiqadi.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "math"
+)
+
+type Shape interface {
+    Area() float64
+}
+
+type Circle struct{ R float64 }
+type Square struct{ Side float64 }
+
+func (c Circle) Area() float64 { return math.Pi * c.R * c.R }
+func (s Square) Area() float64 { return s.Side * s.Side }
+
+func main() {
+    shapes := []Shape{Circle{2}, Square{3}}
+    for _, s := range shapes {
+        fmt.Printf("%.2f\n", s.Area())
+    }
+}
+```
+
+Natija:
+
+```bash
+12.57
+9.00
+```
+
+</details>
+
+## 5. Embedding bilan qayta ishlatish
+
+`Animal` `struct`ida `Name string` maydoni va `Describe() string` metodi bo'lsin (u `"Men " + Name` qaytarsin). `Dog` `struct`iga `Animal`ni embed qiling va `Dog`ga `Bark() string` metodini qo'shing. `Dog` obyektidan **ikkala** metodni ham chaqiring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Animal struct {
+    Name string
+}
+
+func (a Animal) Describe() string {
+    return "Men " + a.Name
+}
+
+type Dog struct {
+    Animal // embedded - Describe() "ko'tariladi"
+}
+
+func (d Dog) Bark() string {
+    return d.Name + ": vov!"
+}
+
+func main() {
+    d := Dog{Animal{Name: "Rex"}}
+    fmt.Println(d.Describe()) // Animal dan
+    fmt.Println(d.Bark())     // Dog dan
+}
+```
+
+Natija:
+
+```bash
+Men Rex
+Rex: vov!
+```
+
+</details>
+
+## 6. Type switch bilan turni aniqlash
+
+`describe(v any)` funksiyasini yozing. U `v`ning turiga qarab quyidagini chop etsin: `int` bo'lsa `"butun son: <qiymat>"`, `string` bo'lsa `"matn: <qiymat>"`, qolgan har qanday tur uchun `"noma'lum tur"`. **Type switch** ishlating.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func describe(v any) {
+    switch x := v.(type) {
+    case int:
+        fmt.Printf("butun son: %d\n", x)
+    case string:
+        fmt.Printf("matn: %s\n", x)
+    default:
+        fmt.Println("noma'lum tur")
+    }
+}
+
+func main() {
+    describe(42)
+    describe("salom")
+    describe(3.14)
+}
+```
+
+Natija:
+
+```bash
+butun son: 42
+matn: salom
+noma'lum tur
+```
+
+</details>
+
+## 7. iota bilan enum va Stringer
+
+`Status` degan enum turini yasang (`int` ustiga): `Pending`, `Active`, `Closed` — `iota` bilan `0, 1, 2` bo'lsin. Unga `String()` metodini qo'shing, shunda chop etilganda son o'rniga nomi (`"Pending"` va hokazo) chiqsin. `Active`ni chop etsangiz `Active` chiqishi kerak.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Status int
+
+const (
+    Pending Status = iota // 0
+    Active                // 1
+    Closed                // 2
+)
+
+func (s Status) String() string {
+    switch s {
+    case Pending:
+        return "Pending"
+    case Active:
+        return "Active"
+    case Closed:
+        return "Closed"
+    default:
+        return "Unknown"
+    }
+}
+
+func main() {
+    s := Active
+    fmt.Println(s)      // String() ishga tushadi
+    fmt.Println(int(s)) // asl son
+}
+```
+
+Natija:
+
+```bash
+Active
+1
+```
+
+</details>
+
+Bularni yechib bo'lsangiz, tuzilmalar asoslari mustahkam o'rnashgan deb bilavering. Keyingi `xatoliklar` bo'limida Go'da xatoliklar bilan qanday ishlanishini ko'ramiz.

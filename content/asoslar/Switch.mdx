@@ -1,0 +1,62 @@
+# Switch
+
+Bir qiymatni bir nechta variant bilan solishtirganda uzun `if/else` zanjirini yozib o'tirmaymiz — `switch` buni ancha toza qiladi. Har bir `case` o'zi tugagach to'xtaydi, boshqa tillardagidek qo'lda `break` yozish shart emas. Keyingi `case` ga ataylab o'tmoqchi bo'lsak `fallthrough` ishlatamiz; shartsiz `switch` esa `if/else` o'rnini bosadi; `i.(type)` orqali qiymatning turini (type) aniqlaymiz.
+
+```go filename="switch.go"
+package main
+
+import "fmt"
+
+func describe(i interface{}) {
+    switch v := i.(type) {
+    case int:
+        fmt.Printf("%d - butun son\n", v)
+    case string:
+        fmt.Printf("%q - matn\n", v)
+    default:
+        fmt.Println("noma'lum tur")
+    }
+}
+
+func main() {
+    day := 3
+    switch day {
+    case 6, 7:
+        fmt.Println("Dam olish")
+    default:
+        fmt.Println("Ish kuni")
+    }
+
+    switch { // shartsiz
+    case day > 5:
+        fmt.Println("hafta oxiri")
+    default:
+        fmt.Println("hafta o'rtasi")
+    }
+
+    switch n := 1; n {
+    case 1:
+        fmt.Println("bir")
+        fallthrough
+    case 2:
+        fmt.Println("ikki")
+    }
+
+    describe(21)
+    describe("salom")
+}
+```
+
+```bash
+$ go run switch.go
+Ish kuni
+hafta o'rtasi
+bir
+ikki
+21 - butun son
+"salom" - matn
+```
+
+> Har bir `case` o'zi to'xtaydi; `fallthrough` va shartsiz `switch` esa qo'l keladigan qo'shimcha moslashuvchanlik beradi.
+
+**Manba / batafsil:** [Go spec — Switch statements](https://go.dev/ref/spec#Switch_statements)

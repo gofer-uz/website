@@ -1,0 +1,325 @@
+# Mashqlar
+
+Bu bo'limda o'rgangan patternlarni endi o'zingiz **qo'llab** ko'rasiz. Har bir mashqda kichik vazifa bor - avval o'zingiz idiomatik Go'da yozib chiqing, keyingina yechimni oching. Maqsad - patternni yodlash emas, qachon va nima uchun ishlatishni his qilish.
+
+## 1. Konfiguratsiyani functional options'ga o'tkazing
+
+Quyidagi `NewClient` konstruktori juda ko'p pozitsion argument oladi va o'qish qiyin: `NewClient("https://gopher.uz", 30*time.Second, 5)`. Uni **functional options** uslubiga o'tkazing: `baseURL` majburiy qolsin, `timeout` va `retries` esa ixtiyoriy `WithTimeout` / `WithRetries` opsiyalari orqali berilsin. Standart qiymatlar: `timeout=10s`, `retries=3`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+type Client struct {
+    baseURL string
+    timeout time.Duration
+    retries int
+}
+
+type Option func(*Client)
+
+func WithTimeout(d time.Duration) Option { return func(c *Client) { c.timeout = d } }
+func WithRetries(n int) Option           { return func(c *Client) { c.retries = n } }
+
+func NewClient(baseURL string, opts ...Option) *Client {
+    c := &Client{baseURL: baseURL, timeout: 10 * time.Second, retries: 3} // standart
+    for _, opt := range opts {
+        opt(c)
+    }
+    return c
+}
+
+func main() {
+    c := NewClient("https://gopher.uz", WithTimeout(30*time.Second), WithRetries(5))
+    fmt.Printf("%s timeout=%s retries=%d\n", c.baseURL, c.timeout, c.retries)
+
+    d := NewClient("https://go.dev") // faqat standart
+    fmt.Printf("%s timeout=%s retries=%d\n", d.baseURL, d.timeout, d.retries)
+}
+```
+
+Natija:
+
+```
+https://gopher.uz timeout=30s retries=5
+https://go.dev timeout=10s retries=3
+```
+
+</details>
+
+## 2. Logging decorator qo'shing
+
+`Store` interfeysi va uni amalga oshiruvchi `MemoryStore` berilgan. `Store`ning kodini o'zgartirmasdan, har bir `Get` chaqiruvini logga yozadigan **decorator** yozing. Decorator ham `Store` interfeysini qanoatlantirsin, shunda uni asl obyekt o'rniga qo'yish mumkin bo'ladi.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Store interface {
+    Get(key string) string
+}
+
+type MemoryStore struct {
+    data map[string]string
+}
+
+func (m MemoryStore) Get(key string) string {
+    return m.data[key]
+}
+
+// LoggingStore boshqa Store ni o'rab, chaqiruvlarni logga yozadi.
+type LoggingStore struct {
+    next Store
+}
+
+func (l LoggingStore) Get(key string) string {
+    fmt.Printf("LOG: Get(%q)\n", key)
+    return l.next.Get(key)
+}
+
+func main() {
+    var s Store = MemoryStore{data: map[string]string{"til": "Go"}}
+    s = LoggingStore{next: s} // yadroni o'raymiz
+    fmt.Println("natija:", s.Get("til"))
+}
+```
+
+Natija:
+
+```
+LOG: Get("til")
+natija: Go
+```
+
+</details>
+
+## 3. To'lov usullari uchun Strategy
+
+To'lov tizimiga `Payme` va `Click` usullarini qo'shing. `PaymentMethod` interfeysini aniqlang (`Pay(amount int) string`), har bir usulni alohida tur qiling. `Checkout` esa ish vaqtida `SetMethod` orqali usulni almashtira olsin - `if/else` shoxlari bo'lmasin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type PaymentMethod interface {
+    Pay(amount int) string
+}
+
+type Payme struct{}
+
+func (Payme) Pay(amount int) string { return fmt.Sprintf("Payme orqali %d so'm to'landi", amount) }
+
+type Click struct{}
+
+func (Click) Pay(amount int) string { return fmt.Sprintf("Click orqali %d so'm to'landi", amount) }
+
+type Checkout struct {
+    method PaymentMethod
+}
+
+func (c *Checkout) SetMethod(m PaymentMethod) { c.method = m }
+func (c *Checkout) Process(amount int) string { return c.method.Pay(amount) }
+
+func main() {
+    c := &Checkout{}
+    c.SetMethod(Payme{})
+    fmt.Println(c.Process(50000))
+    c.SetMethod(Click{}) // usulni ish vaqtida almashtirdik
+    fmt.Println(c.Process(75000))
+}
+```
+
+Natija:
+
+```
+Payme orqali 50000 so'm to'landi
+Click orqali 75000 so'm to'landi
+```
+
+</details>
+
+## 4. Observer bilan obunachilarni xabardor qilish
+
+Blog yangi maqola chiqarganda barcha obunachilar xabar olsin. `Subscriber` interfeysini (`Notify(article string)`) aniqlang, `Blog`da `Subscribe` va `Publish` metodlarini yozing. `Publish` chaqirilganda har bir obunachiga `Notify` yuborilsin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Subscriber interface {
+    Notify(article string)
+}
+
+type EmailSub struct{ name string }
+
+func (e EmailSub) Notify(article string) {
+    fmt.Printf("%s ga email: yangi maqola %q\n", e.name, article)
+}
+
+type Blog struct {
+    subs []Subscriber
+}
+
+func (b *Blog) Subscribe(s Subscriber) { b.subs = append(b.subs, s) }
+
+func (b *Blog) Publish(article string) {
+    for _, s := range b.subs {
+        s.Notify(article)
+    }
+}
+
+func main() {
+    blog := &Blog{}
+    blog.Subscribe(EmailSub{name: "Ali"})
+    blog.Subscribe(EmailSub{name: "Vali"})
+    blog.Publish("Go 1.22")
+}
+```
+
+Natija:
+
+```
+Ali ga email: yangi maqola "Go 1.22"
+Vali ga email: yangi maqola "Go 1.22"
+```
+
+</details>
+
+## 5. Notifier uchun Factory
+
+Kanal nomiga qarab (`"sms"` yoki `"email"`) mos `Notifier`ni qaytaradigan **factory** funksiya yozing. Noma'lum kanal berilsa, `nil` va `error` qaytsin. Chaqiruvchi kod aniq turlarni bilmasin - faqat `Notifier` interfeysi bilan ishlasin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+type Notifier interface {
+    Send(msg string) string
+}
+
+type SMS struct{}
+
+func (SMS) Send(msg string) string { return "SMS: " + msg }
+
+type Email struct{}
+
+func (Email) Send(msg string) string { return "Email: " + msg }
+
+// Factory: kanal nomiga qarab mos turni tanlaydi.
+func NewNotifier(channel string) (Notifier, error) {
+    switch strings.ToLower(channel) {
+    case "sms":
+        return SMS{}, nil
+    case "email":
+        return Email{}, nil
+    default:
+        return nil, fmt.Errorf("noma'lum kanal: %s", channel)
+    }
+}
+
+func main() {
+    for _, ch := range []string{"sms", "email", "push"} {
+        n, err := NewNotifier(ch)
+        if err != nil {
+            fmt.Println("xato:", err)
+            continue
+        }
+        fmt.Println(n.Send("salom"))
+    }
+}
+```
+
+Natija:
+
+```
+SMS: salom
+Email: salom
+xato: noma'lum kanal: push
+```
+
+</details>
+
+## 6. Thread-safe Singleton (`sync.Once` bilan)
+
+Konfiguratsiya faqat bir marta yuklanib, barcha goroutine'lar bitta nusxani ulashsin. `GetConfig` funksiyasini `sync.Once` yordamida yozing - bir necha goroutine parallel chaqirsa ham, yuklash roppa-rosa bir marta bo'lsin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+type Config struct {
+    AppName string
+}
+
+var (
+    instance *Config
+    once     sync.Once
+)
+
+func GetConfig() *Config {
+    once.Do(func() {
+        fmt.Println("config yuklanmoqda...") // faqat bir marta chiqadi
+        instance = &Config{AppName: "gopher.uz"}
+    })
+    return instance
+}
+
+func main() {
+    var wg sync.WaitGroup
+    for i := 0; i < 3; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            _ = GetConfig()
+        }()
+    }
+    wg.Wait()
+    fmt.Println("AppName:", GetConfig().AppName)
+}
+```
+
+Natija:
+
+```
+config yuklanmoqda...
+AppName: gopher.uz
+```
+
+`sync.Once` mutex'ni qo'lda yozishdan ko'ra xavfsizroq va soddaroq - Go'da singleton uchun eng idiomatik yo'l.
+
+</details>
+
+Har bir yechimda e'tibor bering: pattern ko'pincha bitta interfeys yoki funksiya turiga qisqaradi. Go'da "murakkab" konstruksiyalar shart emas - kichik, aniq abstraksiya yetarli.

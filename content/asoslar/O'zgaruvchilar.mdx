@@ -1,28 +1,28 @@
 # O'zgaruvchilar
 
-Go da o'zgaruvchilar aniq e'lon qilinadi. Kompilyator ularning turini tekshiradi, masalan funksiya chaqirilganda.
+Go'da o'zgaruvchilar oshkora e'lon qilinadi. Kompilyator ularning turini o'zi kuzatib boradi va, masalan, funksiya chaqirilganda mosligini tekshiradi.
 
 ## E'lon qilish usullari
 
-**var** kalit so'zi bilan oddiy e'lon qilish:
+**var** kalit so'zi bilan oddiy e'lon:
 
 ```go
 var a = "boshlang'ich"
 ```
 
-Bir nechta o'zgaruvchini birga e'lon qilish:
+Bir nechta o'zgaruvchini birdaniga e'lon qilish:
 
 ```go
 var b, c int = 1, 2
 ```
 
-**Type inference** - Go o'zi turini aniqlaydi:
+**Type inference** — turini Go o'zi topib oladi:
 
 ```go
 var d = true  // Go buni boolean deb tushunadi
 ```
 
-**:= operatori** - qisqaroq usul (faqat funksiya ichida):
+**:= operatori** — qisqaroq yo'l (faqat funksiya ichida ishlaydi):
 
 ```go
 f := "apple"  // var f string = "apple" o'rniga
@@ -30,11 +30,11 @@ f := "apple"  // var f string = "apple" o'rniga
 
 ## Boshlang'ich qiymatlar
 
-Boshlang'ich qiymat bermasangiz, standart qiymat beriladi:
+Boshlang'ich qiymat bermasangiz, o'zgaruvchi standart qiymatni oladi:
 - `int` uchun `0`
 - `string` uchun `""`
 - `boolean` uchun `false`
-- Boshqa turlar uchun ham o'z standart qiymatlari bor
+- qolgan turlarning ham o'z standart qiymati bor
 
 ```go filename="variables.go"
 package main

@@ -1,0 +1,81 @@
+# Panic va recover
+
+Ko'p xatoliklar `if err != nil` bilan tekshiriladigan oddiy qiymat. Lekin ba'zan dastur davom eta olmaydi - slice chegarasidan chiqish, `nil` pointerni ochish, nolga bo'lish. Bunday holatda Go `panic` hosil qiladi: u odatiy oqimni to'xtatib, chaqiruv stegi bo'ylab ko'tariladi, yo'lda deferlarni ishga tushiradi va agar hech kim to'xtatmasa, dasturni crash qiladi.
+
+## Panic va uni tutish
+
+`recover` - `panic` ni to'xtatadigan yagona vosita. Uning sharti bor: u faqat `defer` qilingan funksiya ichida ishlaydi, chunki panic ko'tarilayotganda aynan deferlar bajariladi.
+
+```go filename="recover-basic.go"
+package main
+
+import "fmt"
+
+func xavfli() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("panic tutildi:", r)
+		}
+	}()
+
+	panic("biror narsa buzildi")
+}
+
+func main() {
+	fmt.Println("boshlandi")
+	xavfli()
+	fmt.Println("dastur davom etyapti") // recover tufayli bu ishlaydi
+}
+```
+
+```bash
+$ go run recover-basic.go
+boshlandi
+panic tutildi: biror narsa buzildi
+dastur davom etyapti
+```
+
+Defer qilingan funksiya `recover` bilan panic'ni ushlab qoldi, shuning uchun dastur crash qilmadi. `recover` panic qiymatini qaytaradi; panic bo'lmasa `nil` qaytaradi.
+
+## Panic'ni error'ga aylantirish
+
+Amaldagi eng foydali naqsh - kutubxona ichida panic yuz bersa, uni tutib oddiy `error` ga aylantirish. Buning uchun qaytariladigan `error` ni nomlangan qilib e'lon qilamiz va defer ichida `recover` bilan o'rnatamiz:
+
+```go filename="panic-to-error.go"
+package main
+
+import "fmt"
+
+func xavfsizBolish(a, b int) (natija int, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("hisoblashda panic: %v", r)
+		}
+	}()
+
+	natija = a / b // b nol bo'lsa panic
+	return natija, nil
+}
+
+func main() {
+	n, err := xavfsizBolish(10, 0)
+	fmt.Println("natija:", n, "| err:", err)
+}
+```
+
+```bash
+$ go run panic-to-error.go
+natija: 0 | err: hisoblashda panic: runtime error: integer divide by zero
+```
+
+`10 / 0` panic hosil qildi, lekin defer uni ushlab `err` ga yozdi - funksiya crash o'rniga oddiy xatolik qaytardi. Bu naqsh HTTP serverlarda keng ishlatiladi: bitta so'rovdagi panic butun dasturni yiqitmasligi kerak.
+
+## Qachon panic, qachon error
+
+Oddiy qoida: **kutilgan xatolik uchun `error`, kutilmagan holat uchun `panic`**. Foydalanuvchi noto'g'ri ma'lumot kiritdi, fayl topilmadi, tarmoq uzildi - bular hayotning odatiy holatlari, `error` qaytaring. Slice chegarasidan chiqish, `nil` pointer, ishga tushishda majburiy konfiguratsiya yo'qligi - bular dasturchining xatosi, `panic` o'rinli. Standart kutubxona ham shunday: `panic` kamdan-kam, faqat zarur bo'lganda.
+
+**Takeaway:** `panic` ni faqat tuzatib bo'lmaydigan holatlar uchun ishlating; kerak bo'lsa `defer` + `recover` bilan uni error'ga aylantiring.
+
+**Manba / batafsil:** [Defer, Panic, and Recover (Go blog)](https://go.dev/blog/defer-panic-and-recover), [recover hujjati](https://pkg.go.dev/builtin#recover)
+
+Shu bilan Go da xatoliklar bilan ishlashning to'liq manzarasini - qiymat falsafasidan `panic`/`recover` gacha - ko'rib chiqdik.

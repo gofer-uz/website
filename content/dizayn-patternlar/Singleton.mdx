@@ -1,0 +1,62 @@
+# Singleton
+
+**Muammo:** ba'zi obyektlar butun dastur bo'yicha faqat bitta nusxada bo'lishi kerak — config, ma'lumotlar bazasi puli (pool), logger. Bir nechta `goroutine` uni bir vaqtda so'rab qolsa, ehtiyot bo'lmasang, ikkita nusxa yaratib qo'yish xavfi bor (race condition).
+
+**G'oya:** Go'da eng toza yechim — `sync.Once`. Uning `Do` metodiga bergan funksiyang, uni nechta `goroutine` chaqirmasin, roppa-rosa bir marta ishlaydi. Qolganlari birinchisi tugaguncha kutib turadi.
+
+```go filename="singleton.go"
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+type Config struct {
+	values map[string]string
+}
+
+var (
+	instance *Config
+	once     sync.Once
+)
+
+func GetConfig() *Config {
+	once.Do(func() {
+		fmt.Println("Config yaratilyapti (faqat bir marta)")
+		instance = &Config{values: map[string]string{"port": "8080"}}
+	})
+	return instance
+}
+
+func main() {
+	var wg sync.WaitGroup
+	for i := range 5 {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			fmt.Printf("goroutine %d -> port=%s\n", n, GetConfig().values["port"])
+		}(i)
+	}
+	wg.Wait()
+
+	fmt.Println("bir xil obyektmi:", GetConfig() == GetConfig())
+}
+```
+
+```bash
+$ go run singleton.go
+Config yaratilyapti (faqat bir marta)
+goroutine 4 -> port=8080
+goroutine 2 -> port=8080
+goroutine 3 -> port=8080
+goroutine 0 -> port=8080
+goroutine 1 -> port=8080
+bir xil obyektmi: true
+```
+
+"Config yaratilyapti" bir marta chiqadi; `goroutine`larning chiqish tartibi esa har safar boshqacha bo'lishi mumkin.
+
+**Qachon:** rostdan ham global va o'zgarmas resurslar uchun. Singleton — aslida yashiringan global holat (state): u testlashni qiyinlashtiradi, shuning uchun Go'da ko'pincha obyektni `main`da yaratib, uni argument sifatida uzatish (dependency injection) afzalroq.
+
+Manba / batafsil: [refactoring.guru/design-patterns/singleton](https://refactoring.guru/design-patterns/singleton/go/example)

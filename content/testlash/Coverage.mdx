@@ -1,0 +1,65 @@
+# Coverage
+
+Testlar o'tyapti — lekin ular kodning qancha qismini rostdan ham sinayapti? **Coverage** (test qamrovi) shu savolga javob beradi: qaysi qatorlar test paytida bajarildi, qaysilariga esa umuman tegilmadi. Go'da buni o'lchash uchun bitta bayroq kifoya — `go test -cover`.
+
+```go filename="grade.go"
+package main
+
+// Grade ballni harf bahoga aylantiradi.
+func Grade(score int) string {
+    switch {
+    case score >= 90:
+        return "A"
+    case score >= 70:
+        return "B"
+    default:
+        return "F"
+    }
+}
+```
+
+```go filename="grade_test.go"
+package main
+
+import "testing"
+
+func TestGrade(t *testing.T) {
+    // Ataylab faqat ikkita shoxni sinaymiz — "F" ni tashlab ketamiz.
+    if Grade(95) != "A" {
+        t.Error("95 uchun A kutilgan")
+    }
+    if Grade(75) != "B" {
+        t.Error("75 uchun B kutilgan")
+    }
+}
+```
+
+```bash
+$ go test -cover
+PASS
+coverage: 75.0% of statements
+ok      example/grade   0.003s
+```
+
+75% — chunki `default` shoxini (`"F"`) hech qachon sinamadik. Umumiy foiz muammo qayerdaligini aytmaydi. Buni bilish uchun profil faylini yozib, uni HTML ko'rinishida ochamiz — sinalmagan qatorlar qizil, sinalganlari yashil bo'lib turadi:
+
+```bash
+$ go test -coverprofile=cover.out
+PASS
+coverage: 75.0% of statements
+ok      example/grade   0.003s
+
+$ go tool cover -func=cover.out
+example/grade/grade.go:4:   Grade   75.0%
+total:                      (statements)    75.0%
+
+$ go tool cover -html=cover.out
+```
+
+`-html` brauzerda rangli hisobot ochadi; uni faylga saqlamoqchi bo'lsangiz: `go tool cover -html=cover.out -o cover.html`.
+
+**Xulosa:** `go test -cover` foizni ko'rsatadi; `-coverprofile=cover.out` + `go tool cover -html=cover.out` esa aynan qaysi qatorlar sinalmay qolganini ko'rsatadi. 100% qamrovni maqsad qilib olmang — muhim mantiq sinalgani foizdan muhimroq.
+
+Manba / batafsil: [go.dev/blog/cover](https://go.dev/blog/cover)
+
+Keyingi bo'limda real dasturlarda tez-tez uchraydigan holatni — [HTTP handler'larni testlash](/testlash/HTTP-Testlash) ni ko'ramiz.

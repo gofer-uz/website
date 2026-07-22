@@ -1,0 +1,50 @@
+# Atomic
+
+Oddiy hisoblagich (counter) uchun `Mutex` biroz og'irlik qiladi. `sync/atomic` paketi bitta son ustidagi amallarni — o'qish, yozish, oshirish — apparat darajasida **bo'linmas** (atomic) bajaradi: qulf kerak emas, shu bois tezroq. Go 1.19 dan boshlab `atomic.Int64`, `atomic.Int32`, `atomic.Bool` kabi tipli turlar paydo bo'ldi; ular eski `atomic.AddInt64(&x, 1)` funksiyalariga qaraganda ancha qulay:
+
+```go filename="atomic.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+    "sync/atomic"
+)
+
+func main() {
+    var counter atomic.Int64
+    var wg sync.WaitGroup
+
+    for range 1000 {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            counter.Add(1) // atomar, qulfsiz
+        }()
+    }
+
+    wg.Wait()
+    fmt.Println("counter:", counter.Load())
+}
+```
+
+```bash
+$ go run atomic.go
+counter: 1000
+```
+
+Natija doim aniq `1000`, `-race` ham toza. `Add(1)` qiymatni bo'linmas oshirdi, `Load()` esa xavfsiz o'qidi. `atomic.Int64` nol qiymati bilan darrov ishlatishga tayyor — alohida init qilish shart emas. Faqat uni **nusxalamang**: har doim pointer orqali uzating.
+
+## Qachon atomic, qachon mutex?
+
+**Atomic** — bitta son yoki bayroq ustidagi sodda amal uchun: hisoblagich, flag, ID generatori. Tez va yengil.
+
+**Mutex** — bir nechta o'zgaruvchini birgalikda, izchil o'zgartirish kerak bo'lganda. Masalan, map'ni yangilash yoki "balansdan yechib, tarixga yozish" kabi bir nechta qadam yaxlit bir butun (transaksiya) bo'lishi shart bo'lsa, atomic yetmaydi — mutex kerak.
+
+Qoida oddiy: himoyalayotganingiz bitta counter yoki flag bo'lsa — atomic; holat murakkabroq yoki bir nechta maydon bo'lsa — mutex.
+
+**Qisqasi:** `atomic.Int64` qulfsiz, tez hisoblagich beradi; bir nechta maydonni birga o'zgartirish kerak bo'lsa mutex ishlating.
+
+Manba / batafsil: [pkg.go.dev/sync/atomic](https://pkg.go.dev/sync/atomic)
+
+Endi goroutine'larni to'xtatish va ularga muddat qo'yish uchun `context` ni ko'ramiz.

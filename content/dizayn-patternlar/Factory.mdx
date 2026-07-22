@@ -1,0 +1,62 @@
+# Factory
+
+**Muammo:** chaqiruvchi kod aynan qaysi konkret tur yaratilishini bilishi shart emas. U "menga logger kerak" deydi, xolos — u konsolgami yoki JSON ko'rinishida yozadimi, unga baribir. Yaratish mantig'i esa kod bo'ylab sochilib ketmasligi kerak.
+
+**G'oya:** factory — obyekt yasaydigan oddiy funksiya. U konkret turni emas, **interfeys** (interface) qaytaradi. Go'da bu Java'dagidek alohida "factory class" emas, ko'pincha `New...` bilan boshlanadigan oddiy konstruktor.
+
+```go filename="factory.go"
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type Logger interface {
+	Log(msg string)
+}
+
+type ConsoleLogger struct{ prefix string }
+
+func (c ConsoleLogger) Log(msg string) { fmt.Printf("[%s] %s\n", c.prefix, msg) }
+
+type JSONLogger struct{}
+
+func (JSONLogger) Log(msg string) { fmt.Printf(`{"level":"info","msg":%q}`+"\n", msg) }
+
+// NewLogger interfeys qaytaradi; chaqiruvchi konkret turni bilmaydi.
+func NewLogger(kind string) (Logger, error) {
+	switch strings.ToLower(kind) {
+	case "console":
+		return ConsoleLogger{prefix: "APP"}, nil
+	case "json":
+		return JSONLogger{}, nil
+	default:
+		return nil, fmt.Errorf("noma'lum logger turi: %q", kind)
+	}
+}
+
+func main() {
+	for _, kind := range []string{"console", "json", "xml"} {
+		log, err := NewLogger(kind)
+		if err != nil {
+			fmt.Println("xato:", err)
+			continue
+		}
+		log.Log("tizim ishga tushdi")
+	}
+}
+```
+
+```bash
+$ go run factory.go
+[APP] tizim ishga tushdi
+{"level":"info","msg":"tizim ishga tushdi"}
+xato: noma'lum logger turi: "xml"
+```
+
+`main` konkret turlar haqida hech narsa bilmaydi. Yangi `FileLogger` qo'shsang, faqat bitta `case` qo'shasan, xolos.
+
+**Qachon:** yaratish qarorini bir joyga jamlash kerak bo'lganda. Go'da interfeys yashirin qanoatlantirilgani uchun factory yozish arzon; GoF'ning "Abstract Factory" murakkabligi Go'da odatda oddiy funksiyaga qisqaradi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/factory-method](https://refactoring.guru/design-patterns/factory-method/go/example)

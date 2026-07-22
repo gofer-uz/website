@@ -1,0 +1,71 @@
+# Type Assertion
+
+Interfeys ichida haqiqiy qiymat ham, uning turi (type) ham yashiringan bo'ladi — masalan `any` ichida `int` bormi yoki `string`mi, bilmaymiz. Type assertion — ya'ni `qiymat.(Tur)` shakli — asl qiymatni kerakli turga chiqarib beradi. Oddiy shakli, agar tur mos kelmasa, **panic** beradi, shuning uchun xavfsiz **comma-ok** shaklini ishlatamiz: ikkinchi qiymat (`ok`) tur mos kelgan-kelmaganini bildiradi.
+
+```go filename="comma-ok.go"
+package main
+
+import "fmt"
+
+func main() {
+    var i any = "gopher"
+
+    if s, ok := i.(string); ok {
+        fmt.Println("string:", s)
+    }
+
+    if n, ok := i.(int); ok { // noto'g'ri tur - panic emas, ok=false
+        fmt.Println("int:", n)
+    } else {
+        fmt.Println("bu int emas")
+    }
+}
+```
+
+```bash
+$ go run comma-ok.go
+string: gopher
+bu int emas
+```
+
+Xulosa: comma-ok'da tur mos kelmasa dastur qulab tushmaydi — shunchaki `ok` `false` bo'ladi, xolos.
+
+Bir nechta turni tekshirish kerak bo'lsa, `switch`ning maxsus shakli — **type switch** (`qiymat.(type)`) ancha toza yechim beradi. Har bir `case` ichida o'zgaruvchi avtomatik o'sha turda bo'ladi:
+
+```go filename="type-switch.go"
+package main
+
+import "fmt"
+
+func describe(v any) {
+    switch x := v.(type) {
+    case int:
+        fmt.Printf("butun son: %d\n", x*2)
+    case string:
+        fmt.Printf("matn, uzunligi %d\n", len(x))
+    case nil:
+        fmt.Println("qiymat yo'q (nil)")
+    default:
+        fmt.Printf("noma'lum tur: %T\n", x)
+    }
+}
+
+func main() {
+    describe(42)
+    describe("salom")
+    describe(3.14)
+    describe(nil)
+}
+```
+
+```bash
+$ go run type-switch.go
+butun son: 84
+matn, uzunligi 5
+noma'lum tur: float64
+qiymat yo'q (nil)
+```
+
+Xulosa: type switch — `any` yoki umumiy interfeys orqali kelgan qiymatni turiga qarab ishlashning eng toza usuli.
+
+Manba / batafsil: [Go spec — Type assertions](https://go.dev/ref/spec#Type_assertions), [Type switches](https://go.dev/ref/spec#Type_switches)

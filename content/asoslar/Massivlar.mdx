@@ -1,0 +1,37 @@
+# Massivlar
+
+Massiv (array) — bir xil turdagi qiymatlarning uzunligi oldindan qat'iy belgilangan ketma-ketligi. Go'da uzunlik ham turning bir qismi, shuning uchun `[5]int` va `[3]int` butunlay alohida turlar hisoblanadi. Elementlar ustidan `range` bilan yurib chiqamiz, uzunlikni o'zimiz sanab o'tirmaslik uchun `[...]` yozib kompilyatorga topshiramiz, massiv ichiga massiv joylasak esa 2D jadval hosil bo'ladi.
+
+```go filename="massivlar.go"
+package main
+
+import "fmt"
+
+func main() {
+    var a [5]int
+    a[4] = 100
+    fmt.Println(a, "len:", len(a))
+
+    b := [...]int{1, 2, 3}
+    sum := 0
+    for _, v := range b {
+        sum += v
+    }
+    fmt.Println(b, "yig'indi:", sum)
+
+    var grid [2][3]int
+    grid[1][2] = 7
+    fmt.Println(grid)
+}
+```
+
+```bash
+$ go run massivlar.go
+[0 0 0 0 100] len: 5
+[1 2 3] yig'indi: 6
+[[0 0 0] [0 0 7]]
+```
+
+> Massiv uzunligi o'zgarmaydi; amalda esa ko'pincha uning moslashuvchan ustki qatlami — `slice` ishlatiladi.
+
+**Manba / batafsil:** [Go spec — Array types](https://go.dev/ref/spec#Array_types)

@@ -1,0 +1,90 @@
+# log/slog
+
+`log/slog` (Go 1.21+) — strukturaviy loglash (structured logging) uchun standart paket. Oddiy `log` shunchaki matn qatorini yozadi; `slog` esa har bir logni **kalit-qiymat** juftliklari ko'rinishida yozadi, shuning uchun keyinchalik uni dastur ham osongina qidirib topa oladi.
+
+## Info va Error atributlar bilan
+
+Log xabaridan keyin atributlarni juft-juft qilib berasiz: kalit, qiymat, kalit, qiymat. Standart handler ularni `key=value` ko'rinishida chiqaradi.
+
+```go filename="basic.go"
+package main
+
+import "log/slog"
+
+func main() {
+    slog.Info("foydalanuvchi kirdi", "user", "abdurahmon27", "id", 42)
+    slog.Warn("disk to'lmoqda", "percent", 91)
+    slog.Error("ulanish uzildi", "retry", 3)
+}
+```
+
+```bash
+$ go run basic.go
+2026/07/22 14:30:00 INFO foydalanuvchi kirdi user=abdurahmon27 id=42
+2026/07/22 14:30:00 WARN disk to'lmoqda percent=91
+2026/07/22 14:30:00 ERROR ulanish uzildi retry=3
+```
+
+Qisqasi: `time` qiymati dastur qachon ishga tushganiga qarab o'zgaradi; asosiysi — struktura, ya'ni `msg` + `key=value`.
+
+Manba / batafsil: [pkg.go.dev/log/slog#Info](https://pkg.go.dev/log/slog#Info)
+
+## JSON handler
+
+Ishlab chiqarishda (production) loglar odatda JSON ko'rinishida yig'iladi — Loki, ELK va shunga o'xshash tizimlar uchun. `slog.NewJSONHandler` bilan har bir log bitta qator JSON bo'lib chiqadi.
+
+```go filename="json.go"
+package main
+
+import (
+    "log/slog"
+    "os"
+)
+
+func main() {
+    logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    logger.Info("buyurtma yaratildi", "order_id", 1001, "total", 49.99)
+}
+```
+
+```bash
+$ go run json.go
+{"time":"2026-07-22T14:30:00.123+05:00","level":"INFO","msg":"buyurtma yaratildi","order_id":1001,"total":49.99}
+```
+
+Qisqasi: JSON handler loglarni log yig'uvchi tizimlar bemalol o'qiydigan formatga soladi.
+
+Manba / batafsil: [pkg.go.dev/log/slog#NewJSONHandler](https://pkg.go.dev/log/slog#NewJSONHandler)
+
+## With — umumiy atributlar
+
+`With` bir nechta atributni oldindan biriktirib, yangi logger qaytaradi. So'rov (request) davomida qayta-qayta takrorlanadigan `request_id` kabi maydonlarni har safar qo'lda yozib o'tirmaslik uchun ayni muddao.
+
+```go filename="with.go"
+package main
+
+import (
+    "log/slog"
+    "os"
+)
+
+func main() {
+    logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    reqLog := logger.With("request_id", "req-7", "user", "ali")
+
+    reqLog.Info("boshlandi")
+    reqLog.Info("tugadi", "status", 200)
+}
+```
+
+```bash
+$ go run with.go
+{"time":"...","level":"INFO","msg":"boshlandi","request_id":"req-7","user":"ali"}
+{"time":"...","level":"INFO","msg":"tugadi","request_id":"req-7","user":"ali","status":200}
+```
+
+Qisqasi: `With` bilan kontekstni bir marta biriktirib qo'yasiz — keyin har bir logda o'sha maydonlar o'zi chiqaveradi.
+
+Manba / batafsil: [pkg.go.dev/log/slog#Logger.With](https://pkg.go.dev/log/slog#Logger.With)
+
+Keyingi qismda `slices` va `maps` paketlarini ko'ramiz.

@@ -1,0 +1,76 @@
+# Transaksiyalar
+
+Transaksiya (transaction) bir nechta SQL amalini bitta ajralmas bo'lakka bog'laydi: yo hammasi bajariladi, yo hech biri. Eng klassik misol — pul o'tkazma: bir hisobdan yechib, ikkinchisiga qo'shish. Agar pulni yechib bo'lib, qo'shishdan oldin dastur qulab qolsa, transaksiyasiz pul yo'qoladi. Transaksiya bilan esa yo ikkala amal ham bajariladi, yo ikkalasi ham bekor bo'ladi.
+
+## Begin / Commit / Rollback va deferred-rollback idiomasi
+
+`pool.Begin` transaksiya ochadi, `tx.Commit` uni tasdiqlaydi, `tx.Rollback` esa bekor qiladi. Idiomatik naqsh shunday: `Begin`'dan keyin darhol `defer tx.Rollback(ctx)` yozib qo'yiladi. Agar oxirida `Commit` muvaffaqiyatli o'tib ketsa, keyin ishga tushgan `Rollback` shunchaki e'tiborga olinmaydi (`ErrTxClosed` qaytaradi, zararsiz). Ammo yo'lda xato chiqib, funksiyadan erta `return` qilsangiz — `defer` transaksiyani o'zi avtomatik orqaga qaytaradi. Shu naqsh esdan chiqib qolgan rollback muammosini butunlay yo'qotadi.
+
+```go filename="transfer.go"
+package main
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+// transfer bitta transaksiyada from -> to hisobga pul ko'chiradi.
+func transfer(ctx context.Context, pool *pgxpool.Pool, from, to int64, amount int) error {
+    tx, err := pool.Begin(ctx)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback(ctx) // Commit o'tsa e'tiborsiz qoladi; xatoda bekor qiladi
+
+    _, err = tx.Exec(ctx,
+        "UPDATE accounts SET balance = balance - $1 WHERE id = $2", amount, from)
+    if err != nil {
+        return err
+    }
+    _, err = tx.Exec(ctx,
+        "UPDATE accounts SET balance = balance + $1 WHERE id = $2", amount, to)
+    if err != nil {
+        return err
+    }
+
+    return tx.Commit(ctx)
+}
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    if err := transfer(ctx, pool, 1, 2, 50000); err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("o'tkazma muvaffaqiyatli")
+
+    // Bo'lmagan hisobga o'tkazma — hech narsa o'zgarmaydi.
+    err = transfer(ctx, pool, 1, 999, 50000)
+    fmt.Println("kutilgan xato:", errors.Unwrap(err) != nil || err != nil)
+}
+```
+
+```bash
+$ go run transfer.go
+o'tkazma muvaffaqiyatli
+kutilgan xato: true
+```
+
+Transaksiyalar bilan ishlaganda deyarli har doim shu `defer tx.Rollback(ctx)` naqshini qo'llang.
+
+## Qachon ishlatiladi
+
+Transaksiya kerak bo'ladigan holat oddiy: **bir nechta yozuv mantiqan bir butun, bo'linmas bo'lsa.** Bitta `INSERT` yoki bitta `UPDATE` uchun transaksiya shart emas — PostgreSQL har bir alohida so'rovni o'zi atomik tarzda bajaradi. Lekin "buyurtma yarat + ombordagi sonni kamaytir + to'lov yozuvini qo'sh" kabi ketma-ketlikda — albatta transaksiya kerak.
+
+Manba / batafsil: [pkg.go.dev/github.com/jackc/pgx/v5#Tx](https://pkg.go.dev/github.com/jackc/pgx/v5#Tx)
+
+Sxema o'zgarishlarini tartibli boshqarishga o'tamiz — [Migratsiyalar](/malumotlar-bazasi/postgresql/Migratsiyalar).

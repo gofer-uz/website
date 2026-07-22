@@ -1,0 +1,73 @@
+# Eksport va Import
+
+Go da nima tashqariga ko'rinishini **nomning birinchi harfi** hal qiladi. `public`/`private` kalit so'zlari yo'q.
+
+## Katta harf - eksport qilingan
+
+Katta harf bilan boshlangan nom (funksiya, tur, o'zgaruvchi, struct maydoni) **eksport qilingan** - boshqa paketlardan ko'rinadi. Kichik harf bilan boshlangani - faqat o'z paketi ichida.
+
+```go filename="hisob/hisob.go"
+package hisob
+
+func Qoshish(a, b int) int { return kopaytir(a) + b } // eksport qilingan
+func kopaytir(a int) int   { return a * 2 }            // ichki
+```
+
+```bash
+$ go run .          # main.go ichida hisob.Qoshish(2, 3) chaqirilgan
+7
+```
+
+Agar `hisob.kopaytir` ni tashqaridan chaqirsangiz: `undefined: hisob.kopaytir`. Xuddi shu qoida struct maydonlariga ham tegishli (`Ism` ko'rinadi, `parol` yo'q).
+
+**Xulosa:** katta harf - ochiq, kichik harf - yopiq.
+
+## Importlar va taxalluslar
+
+Paketlarni qavs ichida guruhlab import qilamiz; `gofmt` ularni avtomatik saralaydi. Ikki paket nomi to'qnashsa yoki nom uzun bo'lsa, taxallus (alias) beramiz:
+
+```go
+import (
+	"fmt"
+
+	crand "crypto/rand"
+	mrand "math/rand"
+)
+```
+
+Endi `mrand.Intn` va `crand.Reader` bir-biriga xalaqit bermaydi.
+
+**Xulosa:** paketni nomi bilan chaqirasiz; nom to'qnashsa taxallus qo'yasiz.
+
+## Blank import `_`
+
+Ba'zan paketning nomi kerak emas - faqat uning yon ta'siri (`init` orqali ro'yxatdan o'tishi) kerak. Bunda blank import ishlatiladi:
+
+```go
+import (
+	"database/sql"
+
+	_ "github.com/lib/pq" // PostgreSQL drayverini ro'yxatdan o'tkazadi
+)
+```
+
+`_` bo'lmasa, Go ishlatilmagan import uchun xatolik beradi. `_` esa "yukla, `init` ni ishga tushir, nomi kerak emas" degani.
+
+**Xulosa:** `_` importi paketni faqat yon ta'siri uchun yuklaydi.
+
+## internal/ paketlari
+
+Nomi `internal` bo'lgan papka ichidagi paketlarni faqat shu `internal` ning ota-moduli import qila oladi - tashqaridagi hech kim emas:
+
+```bash
+$ go build   # boshqa modul github.com/gofer-uz/blog/internal/auth ni import qilsa
+use of internal package github.com/gofer-uz/blog/internal/auth not allowed
+```
+
+Loyihaning ochiq API sidan tashqarida qolishi kerak bo'lgan hamma narsani `internal/` ga joylang - keyin uni bemalol o'zgartira olasiz.
+
+**Xulosa:** `internal/` - loyihangizning shaxsiy, tashqariga chiqmaydigan qismi.
+
+Manba / batafsil: [Go spetsifikatsiyasi - Exported identifiers](https://go.dev/ref/spec#Exported_identifiers) va [go.dev/ref/mod - internal](https://go.dev/ref/mod)
+
+Endi kodimiz tashqi paketlarga bog'liq bo'ladi - **bog'liqliklarni** boshqarishga o'tamiz.

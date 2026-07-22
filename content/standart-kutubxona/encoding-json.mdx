@@ -1,0 +1,167 @@
+# encoding/json
+
+JSON — ma'lumot almashishning eng keng tarqalgan formati. Go ning `encoding/json` paketi struct'lar bilan JSON o'rtasida tabiiy aylantirish beradi.
+
+## Marshal — struct'dan JSON'ga
+
+`json.Marshal` Go qiymatini JSON baytlariga aylantiradi. Faqat **eksport qilingan** (bosh harfli) maydonlar JSON'ga tushadi.
+
+```go filename="marshal.go"
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+type User struct {
+    Name string
+    Age  int
+}
+
+func main() {
+    data, _ := json.Marshal(User{Name: "Ali", Age: 27})
+    fmt.Println(string(data))
+}
+```
+
+```bash
+$ go run marshal.go
+{"Name":"Ali","Age":27}
+```
+
+Takeaway: kichik harfli (eksport qilinmagan) maydonlar JSON'da ko'rinmaydi.
+
+Manba / batafsil: [pkg.go.dev/encoding/json#Marshal](https://pkg.go.dev/encoding/json#Marshal)
+
+## Struct tag'lar va omitempty
+
+`json:"..."` tag'i JSON kalitini belgilaydi. `omitempty` bo'sh (nol) qiymatni tashlab yuboradi, `-` esa maydonni butunlay chiqarib tashlaydi.
+
+```go filename="tags.go"
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+type User struct {
+    Name     string `json:"name"`
+    Nickname string `json:"nickname,omitempty"`
+    Password string `json:"-"`
+}
+
+func main() {
+    data, _ := json.Marshal(User{Name: "Ali", Password: "maxfiy"})
+    fmt.Println(string(data))
+}
+```
+
+```bash
+$ go run tags.go
+{"name":"Ali"}
+```
+
+Takeaway: maxfiy maydonlarga `json:"-"`, ixtiyoriylarga `omitempty` qo'ying.
+
+Manba / batafsil: [pkg.go.dev/encoding/json#Marshal (tags)](https://pkg.go.dev/encoding/json#Marshal)
+
+## MarshalIndent
+
+Odam o'qishi uchun chekinishli (indented) JSON kerak bo'lsa `MarshalIndent` ishlatiladi: prefiks va chekinish belgisini beradi.
+
+```go filename="indent.go"
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+func main() {
+    p := map[string]any{"name": "Klaviatura", "price": 49.99}
+    data, _ := json.MarshalIndent(p, "", "  ")
+    fmt.Println(string(data))
+}
+```
+
+```bash
+$ go run indent.go
+{
+  "name": "Klaviatura",
+  "price": 49.99
+}
+```
+
+Takeaway: log va config fayllar uchun `MarshalIndent`, tarmoq uchun oddiy `Marshal`.
+
+Manba / batafsil: [pkg.go.dev/encoding/json#MarshalIndent](https://pkg.go.dev/encoding/json#MarshalIndent)
+
+## Unmarshal va map'ga o'qish
+
+`json.Unmarshal` JSON'ni struct'ga o'qiydi (pointer berish shart). Tuzilma noma'lum bo'lsa `map[string]any` ga o'qiladi — bunda barcha sonlar `float64` bo'lib keladi.
+
+```go filename="unmarshal.go"
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+func main() {
+    var m map[string]any
+    json.Unmarshal([]byte(`{"name":"Laptop","price":1200}`), &m)
+    fmt.Println(m["name"])
+    fmt.Printf("%v (%T)\n", m["price"], m["price"])
+}
+```
+
+```bash
+$ go run unmarshal.go
+Laptop
+1200 (float64)
+```
+
+Takeaway: `map[string]any` da JSON sonlari doim `float64` — tez-tez chalkashtiradigan nuqta.
+
+Manba / batafsil: [pkg.go.dev/encoding/json#Unmarshal](https://pkg.go.dev/encoding/json#Unmarshal)
+
+## Encoder va Decoder — oqim bilan
+
+Fayl yoki tarmoq oqimlari uchun `NewEncoder`/`NewDecoder` qulayroq: ular `io.Writer`/`io.Reader` bilan to'g'ridan-to'g'ri ishlaydi. HTTP handler'larda aynan shular ishlatiladi.
+
+```go filename="stream.go"
+package main
+
+import (
+    "encoding/json"
+    "os"
+)
+
+type Task struct {
+    ID    int    `json:"id"`
+    Title string `json:"title"`
+}
+
+func main() {
+    enc := json.NewEncoder(os.Stdout)
+    enc.SetIndent("", "  ")
+    enc.Encode(Task{ID: 1, Title: "JSON o'rganish"})
+}
+```
+
+```bash
+$ go run stream.go
+{
+  "id": 1,
+  "title": "JSON o'rganish"
+}
+```
+
+Takeaway: `Encode` har chaqiruvda oxiriga yangi qator qo'shadi; oqimlarda xotira tejaydi.
+
+Manba / batafsil: [pkg.go.dev/encoding/json#NewEncoder](https://pkg.go.dev/encoding/json#NewEncoder)
+
+Keyingi qismda `net/http` bilan HTTP server yozamiz.

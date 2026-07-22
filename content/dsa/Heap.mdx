@@ -1,0 +1,66 @@
+# Heap va Priority Queue
+
+Uyum (heap) - maxsus binary tree bo'lib, bitta qoidaga bo'ysunadi: har bir ota-tugun o'z bolalaridan kichik (min-heap) yoki katta (max-heap) bo'ladi. Shu sabab eng kichik (yoki eng katta) element doim ildizda turadi va uni `O(1)` da olib qo'ya olasiz. Uyum ko'pincha ustuvor navbat (priority queue) yasashda ishlatiladi - bu ham navbat, lekin undan eng muhim element birinchi chiqadi.
+
+Qiziq tomoni: uyum aslida oddiy slice ustida saqlanadi. `i` tugunning bolalari `2i+1` va `2i+2` indekslarda turadi - alohida ko'rsatkichlar (pointer) kerak emas.
+
+## Murakkablik (complexity)
+
+| Amal | Murakkablik |
+| --- | --- |
+| Eng kichikni ko'rish (peek) | `O(1)` |
+| Qo'shish (push) | `O(log n)` |
+| Eng kichikni olish (pop) | `O(log n)` |
+| Slice dan heap qurish | `O(n)` |
+
+## container/heap bilan
+
+Go da uyumni noldan yozib o'tirish shart emas - `container/heap` bor. Siz faqat `heap.Interface` ni (ya'ni `sort.Interface` ustiga `Push`/`Pop`) yozib berasiz, qolganini paketning o'zi qiladi.
+
+```go filename="heap.go"
+package main
+
+import (
+    "container/heap"
+    "fmt"
+)
+
+// IntHeap - min-heap
+type IntHeap []int
+
+func (h IntHeap) Len() int            { return len(h) }
+func (h IntHeap) Less(i, j int) bool  { return h[i] < h[j] }
+func (h IntHeap) Swap(i, j int)       { h[i], h[j] = h[j], h[i] }
+func (h *IntHeap) Push(x any)         { *h = append(*h, x.(int)) }
+func (h *IntHeap) Pop() any {
+    old := *h
+    n := len(old)
+    v := old[n-1]
+    *h = old[:n-1]
+    return v
+}
+
+func main() {
+    h := &IntHeap{5, 2, 8, 1}
+    heap.Init(h) // O(n): slice dan heap quramiz
+
+    heap.Push(h, 3) // O(log n)
+
+    // eng kichikdan boshlab hammasini chiqaramiz
+    for h.Len() > 0 {
+        fmt.Print(heap.Pop(h), " ")
+    }
+    fmt.Println()
+}
+```
+
+```bash
+$ go run heap.go
+1 2 3 5 8
+```
+
+`Pop` doim eng kichik elementni beradi, shuning uchun natija saralangan holda chiqadi. `Less` ni `h[i] > h[j]` qilib qo'ysangiz, max-heap bo'ladi - eng kattasidan chiqaradi.
+
+**Xulosa:** Uyum - "eng muhim elementni tez olib ber" degan masalaning yechimi. Go da `container/heap` shay turibdi.
+
+**Manba / batafsil:** [container/heap - pkg.go.dev](https://pkg.go.dev/container/heap)

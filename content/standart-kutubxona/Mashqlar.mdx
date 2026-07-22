@@ -1,0 +1,310 @@
+# Mashqlar
+
+Bu bo'limda o'rgangan paketlaringizni amalda sinab ko'ramiz. Har bir mashqni avval o'zingiz yeching — kodni yozib, ishga tushirib ko'ring — va shundan keyingina yechimni oching. O'z xatolaringizdan o'rganish tayyor javobni o'qishdan ko'ra ko'proq foyda beradi.
+
+## 1. So'zlarni sanash va katta harfga o'tkazish
+
+Bo'sh joylar bilan to'lgan matn berilgan. `strings` yordamida undagi so'zlar sonini toping va matnni bitta bo'sh joy bilan birlashtirib, bosh harflarda chiqaring.
+
+Kirish: `"  Go  juda   qulay til  "` → so'zlar soni `4`, natija `GO JUDA QULAY TIL`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+func main() {
+    s := "  Go  juda   qulay til  "
+    words := strings.Fields(s)
+    fmt.Println("So'zlar soni:", len(words))
+    fmt.Println(strings.ToUpper(strings.Join(words, " ")))
+}
+```
+
+`strings.Fields` ketma-ket bo'sh joylarni o'zi tashlaydi, shuning uchun `Split` dan qulayroq. Natija:
+
+```bash
+So'zlar soni: 4
+GO JUDA QULAY TIL
+```
+
+</details>
+
+## 2. Matnli sonlarni yig'ish
+
+`[]string` ichida sonlar (va noto'g'ri qiymatlar) bor. `strconv.Atoi` bilan har birini `int` ga aylantirib yig'indini hisoblang. Son bo'lmagan elementlarni tashlab keting, dastur qulamasin.
+
+Kirish: `["10", "20", "abc", "30"]` → yig'indi `60`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "strconv"
+)
+
+func main() {
+    inputs := []string{"10", "20", "abc", "30"}
+    sum := 0
+    for _, s := range inputs {
+        n, err := strconv.Atoi(s)
+        if err != nil {
+            fmt.Printf("%q son emas, tashlab ketildi\n", s)
+            continue
+        }
+        sum += n
+    }
+    fmt.Println("Yig'indi:", sum)
+}
+```
+
+Gap `err` ni tekshirishda: e'tiborsiz qoldirsangiz, `"abc"` da dastur `0` qo'shib davom etardi, lekin xatoni yashirgan bo'lardingiz. Natija:
+
+```bash
+"abc" son emas, tashlab ketildi
+Yig'indi: 60
+```
+
+</details>
+
+## 3. Ikki sana orasidagi kunlar
+
+Ikkita `time.Time` berilgan. Ular orasidagi kunlar sonini hisoblang va ikkala sanani `2006-01-02` formatida chiqaring.
+
+Kirish: `2026-01-01` va `2026-07-22` → `202 kun`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    start := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+    end := time.Date(2026, time.July, 22, 0, 0, 0, 0, time.UTC)
+
+    diff := end.Sub(start)
+    days := int(diff.Hours() / 24)
+    fmt.Printf("%s dan %s gacha: %d kun\n",
+        start.Format("2006-01-02"), end.Format("2006-01-02"), days)
+}
+```
+
+`Sub` ayirmani `Duration` qilib beradi; uni `Hours()` orqali soatga, keyin `24` ga bo'lib kunga o'tkazamiz. Natija:
+
+```bash
+2026-01-01 dan 2026-07-22 gacha: 202 kun
+```
+
+</details>
+
+## 4. So'zlar chastotasini sanash
+
+Matndagi har bir so'z necha marta uchraganini `map` da hisoblang va natijani **alifbo tartibida** chiqaring. Tartib uchun `slices` va `maps` paketlaridan foydalaning (map bo'yicha oddiy `range` tartibi tasodifiy bo'ladi).
+
+Kirish: `"olma anor olma uzum anor olma"`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "fmt"
+    "maps"
+    "slices"
+    "strings"
+)
+
+func main() {
+    text := "olma anor olma uzum anor olma"
+    counts := map[string]int{}
+    for _, w := range strings.Fields(text) {
+        counts[w]++
+    }
+
+    for _, k := range slices.Sorted(maps.Keys(counts)) {
+        fmt.Printf("%s: %d\n", k, counts[k])
+    }
+}
+```
+
+`slices.Sorted(maps.Keys(counts))` — kalitlarni tartibli slice qilib olishning eng toza yo'li. Natija:
+
+```bash
+anor: 2
+olma: 3
+uzum: 1
+```
+
+</details>
+
+## 5. JSON'ni o'qib, filtrlab, qayta yozish
+
+JSON massivda mahsulotlar (`name`, `price`) bor. Uni struct'ga o'qing, jami narxni hisoblang va narxi `100000` dan yuqori bo'lganlar ro'yxatini tuzing. Natijani chekinishli (indented) JSON qilib chiqaring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+type Product struct {
+    Name  string `json:"name"`
+    Price int    `json:"price"`
+}
+
+func main() {
+    data := `[
+        {"name":"Klaviatura","price":250000},
+        {"name":"Sichqoncha","price":80000},
+        {"name":"Monitor","price":1500000}
+    ]`
+
+    var products []Product
+    if err := json.Unmarshal([]byte(data), &products); err != nil {
+        panic(err)
+    }
+
+    total := 0
+    var expensive []string
+    for _, p := range products {
+        total += p.Price
+        if p.Price >= 100000 {
+            expensive = append(expensive, p.Name)
+        }
+    }
+
+    summary := map[string]any{
+        "total":     total,
+        "expensive": expensive,
+    }
+    out, _ := json.MarshalIndent(summary, "", "  ")
+    fmt.Println(string(out))
+}
+```
+
+`json.Marshal` map kalitlarini alifbo tartibida chiqaradi, shuning uchun `expensive` `total` dan oldin keladi. Natija:
+
+```bash
+{
+  "expensive": [
+    "Klaviatura",
+    "Monitor"
+  ],
+  "total": 1830000
+}
+```
+
+</details>
+
+## 6. Qatorlarni tozalab raqamlash
+
+Ko'p qatorli matn berilgan; ba'zi qatorlar bo'sh yoki faqat bo'sh joydan iborat. `bufio.Scanner` bilan matnni qatorlarga bo'ling, bo'sh qatorlarni tashlab, qolganlarini `1` dan boshlab raqamlang.
+
+Kirish: `"birinchi\n\nikkinchi\n   \nuchinchi\n"`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "strings"
+)
+
+func main() {
+    input := "birinchi\n\nikkinchi\n   \nuchinchi\n"
+    scanner := bufio.NewScanner(strings.NewReader(input))
+    n := 0
+    for scanner.Scan() {
+        line := strings.TrimSpace(scanner.Text())
+        if line == "" {
+            continue
+        }
+        n++
+        fmt.Printf("%d: %s\n", n, line)
+    }
+}
+```
+
+`strings.NewReader` o'rniga `os.Stdin` qo'ysangiz, xuddi shu kod foydalanuvchi kiritgan matnni o'qiydi. `TrimSpace` faqat bo'sh joydan iborat qatorlarni ham bo'sh deb hisoblaydi. Natija:
+
+```bash
+1: birinchi
+2: ikkinchi
+3: uchinchi
+```
+
+</details>
+
+## 7. Kichik JSON API server
+
+`net/http` bilan `GET /salom/{name}` yo'lini qo'llovchi server yozing. U yo'ldagi ismni olib, JSON javob qaytarsin va har so'rovni `slog` bilan loglasin.
+
+So'rov: `curl http://localhost:8080/salom/Ali` → javob `{"message":"Salom, Ali!"}`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "encoding/json"
+    "log/slog"
+    "net/http"
+)
+
+func main() {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /salom/{name}", func(w http.ResponseWriter, r *http.Request) {
+        name := r.PathValue("name")
+        slog.Info("so'rov keldi", "name", name)
+
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(map[string]string{
+            "message": "Salom, " + name + "!",
+        })
+    })
+
+    slog.Info("server ishga tushdi", "addr", ":8080")
+    http.ListenAndServe(":8080", mux)
+}
+```
+
+Go 1.22 dan metodli pattern (`GET /salom/{name}`) va `r.PathValue` tashqi router'siz REST yo'llarini yozish imkonini beradi. `ResponseWriter` `io.Writer` bo'lgani uchun `json.NewEncoder(w).Encode(...)` javobga to'g'ridan-to'g'ri JSON yozadi. Sinash:
+
+```bash
+$ go run server.go &
+$ curl http://localhost:8080/salom/Ali
+{"message":"Salom, Ali!"}
+```
+
+</details>
+
+Bu mashqlarni bemalol yechgan bo'lsangiz, standart kutubxonaning kundalik yadrosini o'zlashtirgansiz — endi shular ustiga haqiqiy dasturlar quriladi.

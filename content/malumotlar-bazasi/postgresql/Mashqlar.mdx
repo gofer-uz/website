@@ -1,0 +1,382 @@
+# Mashqlar
+
+Bu bo'limdagi mashqlar **ishlab turgan PostgreSQL** ni talab qiladi. Agar hali ko'tarmagan bo'lsangiz, [Kirish](/malumotlar-bazasi/postgresql/Kirish) dagi Docker buyrug'idan foydalaning va driverni o'rnating: `go get github.com/jackc/pgx/v5`. Connection string sifatida hamma joyda `postgres://gopher:secret@localhost:5432/shop` ishlatilgan.
+
+Mashqlarda quyidagi jadvallar nazarda tutiladi:
+
+```sql
+CREATE TABLE products (
+    id    bigserial PRIMARY KEY,
+    name  text NOT NULL,
+    price int  NOT NULL
+);
+
+CREATE TABLE accounts (
+    id      bigserial PRIMARY KEY,
+    balance int NOT NULL
+);
+```
+
+Har bir mashqni avval o'zingiz yozib, bazada sinab ko'ring — keyin yechimni oching.
+
+## 1. Ulanish va tekshiruv
+
+`pgxpool` bilan connection pool oching va `Ping` orqali bazaga haqiqatan ulanganingizni tasdiqlang. Nima uchun `pgxpool.New` xatosiz qaytishining o'zi yetarli emas?
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    if err := pool.Ping(ctx); err != nil {
+        log.Fatal("ulanmadi: ", err)
+    }
+    fmt.Println("bazaga ulandik")
+}
+```
+
+```bash
+$ go run main.go
+bazaga ulandik
+```
+
+`pgxpool.New` faqat konfiguratsiyani tekshiradi — birinchi haqiqiy ulanish birinchi so'rovda ochiladi. Shuning uchun `Ping` bilan bazaning javob berishini alohida tasdiqlang. Havzani `main` da bir marta oching va `defer pool.Close()` qo'ying.
+
+</details>
+
+## 2. Yangi qator qo'shib, ID sini olish
+
+`products` ga bitta mahsulot qo'shing va PostgreSQL generatsiya qilgan `id` ni darhol qaytarib oling. Qiymatlarni to'g'ridan-to'g'ri SQL ichiga yozmang.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    var id int64
+    err = pool.QueryRow(ctx,
+        "INSERT INTO products (name, price) VALUES ($1, $2) RETURNING id",
+        "Notebook", 1200000).Scan(&id)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("yangi mahsulot ID:", id)
+}
+```
+
+```bash
+$ go run main.go
+yangi mahsulot ID: 1
+```
+
+Ikki muhim nuqta: qiymatlar `$1`, `$2` orqali alohida uzatiladi (SQL injection'dan himoya), va `INSERT ... RETURNING id` yangi ID ni qaytaradi — alohida `SELECT` shart emas. Bitta qator qaytgani uchun `QueryRow` ishlatamiz.
+
+</details>
+
+## 3. Filtrlangan ko'p qatorni o'qish
+
+Narxi `100000` va undan yuqori bo'lgan barcha mahsulotlarni narx bo'yicha kamayish tartibida chiqaring. Filtr qiymatini parametr sifatida bering.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    rows, err := pool.Query(ctx,
+        "SELECT id, name, price FROM products WHERE price >= $1 ORDER BY price DESC", 100000)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var id int64
+        var name string
+        var price int
+        if err := rows.Scan(&id, &name, &price); err != nil {
+            log.Fatal(err)
+        }
+        fmt.Printf("#%d %s — %d so'm\n", id, name, price)
+    }
+    if err := rows.Err(); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+```bash
+$ go run main.go
+#1 Notebook — 1200000 so'm
+```
+
+`defer rows.Close()` — majburiy, aks holda ulanish havzaga qaytmaydi. Sikldan keyin `rows.Err()` ni tekshiring: `Next` xatolikda ham `false` qaytaradi, tekshirmasangiz xatoni sezmay qolasiz.
+
+</details>
+
+## 4. "Topilmadi" holatini to'g'ri ushlash
+
+`id` bo'yicha mahsulot nomini qaytaruvchi funksiya yozing. Agar bunday mahsulot bo'lmasa, dastur qulamasin — buni oddiy xatodan ajratib, tushunarli xabar bering.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5"
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func productName(ctx context.Context, pool *pgxpool.Pool, id int64) (string, error) {
+    var name string
+    err := pool.QueryRow(ctx,
+        "SELECT name FROM products WHERE id = $1", id).Scan(&name)
+    if errors.Is(err, pgx.ErrNoRows) {
+        return "", fmt.Errorf("mahsulot #%d topilmadi", id)
+    }
+    if err != nil {
+        return "", err
+    }
+    return name, nil
+}
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    name, err := productName(ctx, pool, 999)
+    if err != nil {
+        fmt.Println("xato:", err)
+        return
+    }
+    fmt.Println("topildi:", name)
+}
+```
+
+```bash
+$ go run main.go
+xato: mahsulot #999 topilmadi
+```
+
+Qator topilmaganda `Scan` `pgx.ErrNoRows` qaytaradi. Uni `errors.Is(err, pgx.ErrNoRows)` bilan alohida ushlash kerak — aks holda "topilmadi" holati oddiy tizim xatosi bilan aralashib ketadi.
+
+</details>
+
+## 5. Transaksiya bilan pul o'tkazma
+
+Bir hisobdan yechib, ikkinchisiga qo'shishni **bitta transaksiyada** bajaring: yo ikkalasi ham bo'ladi, yo hech biri. Yo'lda xato chiqsa, avtomatik orqaga qaytsin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func transfer(ctx context.Context, pool *pgxpool.Pool, from, to int64, amount int) error {
+    tx, err := pool.Begin(ctx)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback(ctx) // Commit o'tsa e'tiborsiz qoladi; xatoda bekor qiladi
+
+    _, err = tx.Exec(ctx,
+        "UPDATE accounts SET balance = balance - $1 WHERE id = $2", amount, from)
+    if err != nil {
+        return err
+    }
+    _, err = tx.Exec(ctx,
+        "UPDATE accounts SET balance = balance + $1 WHERE id = $2", amount, to)
+    if err != nil {
+        return err
+    }
+    return tx.Commit(ctx)
+}
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    if err := transfer(ctx, pool, 1, 2, 50000); err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("o'tkazma muvaffaqiyatli")
+}
+```
+
+```bash
+$ go run main.go
+o'tkazma muvaffaqiyatli
+```
+
+Idiomatik naqsh: `Begin` dan so'ng darhol `defer tx.Rollback(ctx)`. Oxirida `Commit` o'tsa, keyingi `Rollback` zararsiz e'tiborsiz qoldiriladi; ammo o'rtada xato chiqib erta `return` qilsangiz — `defer` transaksiyani avtomatik bekor qiladi.
+
+</details>
+
+## 6. Repository interfeysi
+
+Mahsulotga kirishni bitta interfeys ortiga yashiring: `Create` va `ByID` metodlari bo'lsin. So'ng uni `pgx` bilan amalga oshiring. Servis kodi faqat interfeysni ko'rsin — ortida qaysi baza turgani ahamiyatsiz bo'lsin.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "context"
+    "errors"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5"
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Product struct {
+    ID    int64
+    Name  string
+    Price int
+}
+
+// ProductRepository — ma'lumotga kirish shartnomasi.
+type ProductRepository interface {
+    Create(ctx context.Context, p *Product) error
+    ByID(ctx context.Context, id int64) (*Product, error)
+}
+
+type pgRepo struct {
+    pool *pgxpool.Pool
+}
+
+func NewProductRepository(pool *pgxpool.Pool) ProductRepository {
+    return &pgRepo{pool: pool}
+}
+
+func (r *pgRepo) Create(ctx context.Context, p *Product) error {
+    return r.pool.QueryRow(ctx,
+        "INSERT INTO products (name, price) VALUES ($1, $2) RETURNING id",
+        p.Name, p.Price).Scan(&p.ID)
+}
+
+func (r *pgRepo) ByID(ctx context.Context, id int64) (*Product, error) {
+    var p Product
+    err := r.pool.QueryRow(ctx,
+        "SELECT id, name, price FROM products WHERE id = $1", id).
+        Scan(&p.ID, &p.Name, &p.Price)
+    if errors.Is(err, pgx.ErrNoRows) {
+        return nil, nil // topilmadi — bu xato emas
+    }
+    if err != nil {
+        return nil, err
+    }
+    return &p, nil
+}
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    var repo ProductRepository = NewProductRepository(pool)
+
+    p := &Product{Name: "Klaviatura", Price: 250000}
+    if err := repo.Create(ctx, p); err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("qo'shildi, ID:", p.ID)
+
+    got, err := repo.ByID(ctx, p.ID)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("topildi: %s — %d so'm\n", got.Name, got.Price)
+}
+```
+
+```bash
+$ go run main.go
+qo'shildi, ID: 1
+topildi: Klaviatura — 250000 so'm
+```
+
+`NewProductRepository` `*pgxpool.Pool` ni oladi, lekin `ProductRepository` interfeysini qaytaradi. Servis kodi shu interfeysga bog'lanadi — ertaga in-memory yoki boshqa bazaga o'tsangiz, servis o'zgarmaydi. Bu — patternning butun ma'nosi.
+
+</details>
+
+Bu mashqlarni yechgan bo'lsangiz, ulanishdan tortib transaksiya va toza arxitekturagacha — Go va PostgreSQL bilan haqiqiy loyiha yozishning yadrosi qo'lingizda.

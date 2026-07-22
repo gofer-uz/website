@@ -1,0 +1,86 @@
+# Graflar
+
+Graf (graph) - tugunlar (vertex) va ularni bog'lab turuvchi qirralar (edge) to'plami. Ijtimoiy tarmoq (odamlar va do'stlik), yo'l xaritasi (shaharlar va yo'llar), internet - hammasi graf. Daraxt ham aslida grafning maxsus, siklsiz bir turi, xolos.
+
+Grafni kodda saqlashning eng keng tarqalgan usuli - qo'shnilik ro'yxati (adjacency list): har tugun uchun uning qo'shnilari ro'yxati. Go da buni `map[int][]int` yoki `[][]int` bilan tabiiy ifodalash mumkin.
+
+## Ikki asosiy aylanish
+
+BFS (Breadth-First Search) - qatlam-qatlam yuradi: avval barcha yaqin qo'shnilar, keyin ularning qo'shnilari. Navbat (queue) ishlatadi, eng qisqa yo'lni topishda qo'l keladi. DFS (Depth-First Search) esa bir yo'nalish bo'ylab oxirigacha chuqurlashadi, so'ng orqaga qaytadi. Stek yoki rekursiya ishlatadi. Ikkovi ham `O(V + E)` - bu yerda V tugunlar, E qirralar soni.
+
+```go filename="graph.go"
+package main
+
+import "fmt"
+
+type Graph struct {
+    adj map[int][]int
+}
+
+func NewGraph() *Graph { return &Graph{adj: make(map[int][]int)} }
+
+func (g *Graph) AddEdge(u, v int) {
+    g.adj[u] = append(g.adj[u], v)
+    g.adj[v] = append(g.adj[v], u) // yo'naltirilmagan graf
+}
+
+// BFS: queue bilan qatlam-qatlam
+func (g *Graph) BFS(start int) []int {
+    visited := map[int]bool{start: true}
+    queue := []int{start}
+    var order []int
+    for len(queue) > 0 {
+        node := queue[0]
+        queue = queue[1:]
+        order = append(order, node)
+        for _, n := range g.adj[node] {
+            if !visited[n] {
+                visited[n] = true
+                queue = append(queue, n)
+            }
+        }
+    }
+    return order
+}
+
+// DFS: rekursiya bilan chuqurlashish
+func (g *Graph) DFS(start int) []int {
+    visited := map[int]bool{}
+    var order []int
+    var dfs func(int)
+    dfs = func(node int) {
+        visited[node] = true
+        order = append(order, node)
+        for _, n := range g.adj[node] {
+            if !visited[n] {
+                dfs(n)
+            }
+        }
+    }
+    dfs(start)
+    return order
+}
+
+func main() {
+    g := NewGraph()
+    g.AddEdge(0, 1)
+    g.AddEdge(0, 2)
+    g.AddEdge(1, 3)
+    g.AddEdge(2, 3)
+
+    fmt.Println("BFS:", g.BFS(0))
+    fmt.Println("DFS:", g.DFS(0))
+}
+```
+
+```bash
+$ go run graph.go
+BFS: [0 1 2 3]
+DFS: [0 1 3 2]
+```
+
+Grafda `visited` map majburiy: sikllar bo'lsa, usiz cheksiz aylanib qolasiz. BFS yaqinlarni oldin, DFS esa bitta shoxni oxirigacha kezib chiqishini natijalarning o'zidan ko'rib turibsiz.
+
+**Xulosa:** Graf = tugun + qirra. Qo'shnilik ro'yxati bilan saqlang, BFS/DFS bilan aylaning, `visited` ni esdan chiqarmang.
+
+**Manba / batafsil:** [Graph traversal - Wikipedia](https://en.wikipedia.org/wiki/Graph_traversal)

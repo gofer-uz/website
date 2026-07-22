@@ -1,0 +1,68 @@
+# Fuzzing
+
+Table-driven testda sinaladigan kirishlarni qo'lda o'ylab topasiz — va aynan o'ylab topa olmagan kirishingiz kodni buzadi. **Fuzzing** (Go 1.18 dan beri standart) shu ishni avtomatlashtiradi: tasodifiy, kutilmagan kirishlarni minglab marta generatsiya qilib, kod qayerda panic bo'lishini yoki qaysi qoidani buzishini qidiradi.
+
+Fuzz funksiyasi `Fuzz` bilan boshlanadi va `f *testing.F` oladi. `f.Add(...)` orqali boshlang'ich urug' (seed) misollarini berasiz, `f.Fuzz(...)` esa har bir kirish uchun chaqiriladigan funksiyani qabul qiladi. Klassik xususiyat (property) shunaqa — bir satrni ikki marta teskari qilsak, aslini qaytarib olishimiz kerak:
+
+```go filename="reverse.go"
+package main
+
+// Reverse satrni rune bo'yicha teskari qiladi.
+func Reverse(s string) string {
+    r := []rune(s)
+    for i, j := 0, len(r)-1; i < j; i, j = i+1, j-1 {
+        r[i], r[j] = r[j], r[i]
+    }
+    return string(r)
+}
+```
+
+```go filename="reverse_test.go"
+package main
+
+import (
+    "testing"
+    "unicode/utf8"
+)
+
+func FuzzReverse(f *testing.F) {
+    // Seed misollari — fuzzer shulardan boshlab yangi kirish o'ylab topadi.
+    f.Add("salom")
+    f.Add("")
+    f.Add("12321")
+
+    f.Fuzz(func(t *testing.T, s string) {
+        // Noto'g'ri UTF-8 kirish uchun []rune round-trip kafolatlanmaydi,
+        // shuning uchun bunday holatlarni o'tkazib yuboramiz.
+        if !utf8.ValidString(s) {
+            t.Skip()
+        }
+        rev := Reverse(Reverse(s))
+        if rev != s {
+            t.Errorf("ikki marta Reverse(%q) = %q; asliga teng emas", s, rev)
+        }
+    })
+}
+```
+
+Bu yerdagi `t.Skip()` ataylab qo'yilgan: fuzzer noto'g'ri UTF-8 baytlar ketma-ketligini ham sinab ko'radi, `[]rune` esa bunday baytlarni almashtirish belgisiga (U+FFFD) aylantirib, asl qiymatni yo'qotadi. Fuzzing'ning kuchi aynan shunda — siz o'ylab ham ko'rmagan holatni topib beradi.
+
+Odatdagi `go test` fuzz funksiyasini faqat seed'lar bilan bir marta yugurtiradi. Haqiqiy fuzzing uchun esa `-fuzz` bayrog'i kerak (`-fuzztime` orqali qancha vaqt ishlashini cheklaysiz):
+
+```bash
+$ go test -fuzz=FuzzReverse -fuzztime=10s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 12 workers
+fuzz: elapsed: 3s, execs: 285331 (95102/sec), new interesting: 18 total: 21
+fuzz: elapsed: 10s, execs: 921204 (91173/sec), new interesting: 24 total: 27
+PASS
+ok      example/reverse 10.312s
+```
+
+Agar fuzzer kodni buzadigan kirish topsa, uni `testdata/fuzz/` papkasiga saqlab qo'yadi — shundan keyin oddiy `go test` ham shu holatni har safar qayta tekshiradi, ya'ni topilgan bug regression testga aylanib qoladi.
+
+**Xulosa:** `func FuzzXxx(f *testing.F)` + `f.Add` seed'lari + `f.Fuzz(...)`; `go test -fuzz=...` tasodifiy kirishlar bilan bug qidiradi.
+
+Manba / batafsil: [go.dev/security/fuzz](https://go.dev/security/fuzz/)
+
+Keyingi bo'limda testlar kodning qancha qismini qamrab olishini — [coverage](/testlash/Coverage) ni o'lchashni ko'rib chiqamiz.

@@ -1,0 +1,135 @@
+# Migratsiyalar
+
+Baza sxemasi (jadvallar, indekslar) vaqt o'tishi bilan o'zgaradi. Bu o'zgarishlarni qo'lda `psql` da terib yurish — xatoga yo'l. **Migratsiya** — sxemani o'zgartiradigan, tartiblangan va versiyalangan `.sql` fayllar. Har bir muhitda (mahalliy, test, production) aynan bir xil qadamlar bajariladi.
+
+Migratsiyalar odatda tartib raqami bilan nomlanadi:
+
+```bash
+migrations/
+  0001_init.sql
+  0002_add_price_index.sql
+```
+
+## Forward-only vs up/down
+
+Ikki yondashuv bor. **Up/down**: har migratsiyaning ortga qaytarish ("down") skripti ham bo'ladi. **Forward-only**: faqat oldinga — xato bo'lsa, orqaga qaytarish uchun yangi migratsiya yoziladi. Production da forward-only ko'pincha xavfsizroq: allaqachon qo'llangan o'zgarishni "down" bilan qaytarish real ma'lumotni yo'qotishi mumkin. Biz sodda, forward-only runner yozamiz.
+
+## Sodda migratsiya runner
+
+Fayllarni dasturga `embed` bilan joylab, `schema_migrations` jadvalida qaysilari qo'llanganini kuzatamiz. Har bir yangi fayl bitta transaksiyada bajariladi va ro'yxatga yoziladi — takror ishga tushirsangiz, o'tganlari qayta qo'llanmaydi.
+
+```sql filename="migrations/0001_init.sql"
+CREATE TABLE products (
+    id    bigserial PRIMARY KEY,
+    name  text NOT NULL,
+    price int  NOT NULL
+);
+```
+
+```go filename="migrate.go"
+package main
+
+import (
+    "context"
+    "embed"
+    "fmt"
+    "log"
+    "sort"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+//go:embed migrations/*.sql
+var migrationsFS embed.FS
+
+func runMigrations(ctx context.Context, pool *pgxpool.Pool) error {
+    // Qo'llangan migratsiyalarni kuzatuvchi jadval.
+    _, err := pool.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version text PRIMARY KEY,
+            applied_at timestamptz NOT NULL DEFAULT now()
+        )`)
+    if err != nil {
+        return err
+    }
+
+    files, err := migrationsFS.ReadDir("migrations")
+    if err != nil {
+        return err
+    }
+    names := make([]string, 0, len(files))
+    for _, f := range files {
+        names = append(names, f.Name())
+    }
+    sort.Strings(names) // 0001, 0002 ... tartibida
+
+    for _, name := range names {
+        var exists bool
+        if err := pool.QueryRow(ctx,
+            "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)",
+            name).Scan(&exists); err != nil {
+            return err
+        }
+        if exists {
+            continue // allaqachon qo'llangan
+        }
+
+        sqlBytes, err := migrationsFS.ReadFile("migrations/" + name)
+        if err != nil {
+            return err
+        }
+
+        tx, err := pool.Begin(ctx)
+        if err != nil {
+            return err
+        }
+        if _, err := tx.Exec(ctx, string(sqlBytes)); err != nil {
+            tx.Rollback(ctx)
+            return fmt.Errorf("%s: %w", name, err)
+        }
+        if _, err := tx.Exec(ctx,
+            "INSERT INTO schema_migrations (version) VALUES ($1)", name); err != nil {
+            tx.Rollback(ctx)
+            return err
+        }
+        if err := tx.Commit(ctx); err != nil {
+            return err
+        }
+        fmt.Println("qo'llandi:", name)
+    }
+    return nil
+}
+
+func main() {
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer pool.Close()
+
+    if err := runMigrations(ctx, pool); err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("migratsiyalar tayyor")
+}
+```
+
+```bash
+$ go run migrate.go
+qo'llandi: 0001_init.sql
+migratsiyalar tayyor
+
+$ go run migrate.go
+migratsiyalar tayyor
+```
+
+Ikkinchi marta ishga tushirilganda hech narsa qayta qo'llanmadi — aynan shu migratsiyaning maqsadi.
+
+## golang-migrate
+
+O'z runneringizni yozish tushunish uchun foydali, lekin production da ko'pincha tayyor asbob olinadi. Eng mashhuri — [`golang-migrate/migrate`](https://github.com/golang-migrate/migrate): up/down fayllar, CLI, ko'p bazalarni qo'llash va versiyani boshqarish o'zida bor. Uni ham `.sql` fayllar bilan, ham Go kutubxonasi sifatida ishlatsa bo'ladi.
+
+Manba / batafsil: [github.com/golang-migrate/migrate](https://github.com/golang-migrate/migrate)
+
+Endi kodni baza detallaridan ajratamiz — [Repository Pattern](/malumotlar-bazasi/postgresql/Repository-Pattern).
