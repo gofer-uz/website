@@ -1,0 +1,403 @@
+# Mashqlar
+
+Bu bo'limda testni **o'zingiz yozasiz**. Har bir mashqda sinaladigan kod berilgan; vazifangiz — `_test.go` faylini yozib, `go test` bilan ishga tushirish. Avval mustaqil urinib ko'ring, keyin yechimni oching. Yechimlarda test kodi va `go test` chiqishi keltirilgan.
+
+## 1. Birinchi test
+
+Quyidagi `Abs` funksiyasi uchun `TestAbs` yozing: manfiy, musbat va nol kirishlarni tekshirsin. Xato chiqsa `t.Errorf` dan foydalaning.
+
+```go filename="abs.go"
+package mathx
+
+func Abs(n int) int {
+    if n < 0 {
+        return -n
+    }
+    return n
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="abs_test.go"
+package mathx
+
+import "testing"
+
+func TestAbs(t *testing.T) {
+    if got := Abs(-5); got != 5 {
+        t.Errorf("Abs(-5) = %d; kutilgan 5", got)
+    }
+    if got := Abs(7); got != 7 {
+        t.Errorf("Abs(7) = %d; kutilgan 7", got)
+    }
+    if got := Abs(0); got != 0 {
+        t.Errorf("Abs(0) = %d; kutilgan 0", got)
+    }
+}
+```
+
+```bash
+$ go test -v -run TestAbs
+=== RUN   TestAbs
+--- PASS: TestAbs (0.00s)
+PASS
+ok      example/mathx   0.002s
+```
+
+Test funksiyasi `Test` bilan boshlanadi va `t *testing.T` oladi. `Errorf` xatoni qayd qiladi, ammo keyingi tekshiruvlar davom etaveradi.
+
+</details>
+
+## 2. Table-driven test
+
+`IsEven` uchun table-driven test yozing: bir nechta holatni struct slice qilib yig'ing va har birini `t.Run` bilan alohida subtest qiling.
+
+```go filename="even.go"
+package mathx
+
+func IsEven(n int) bool {
+    return n%2 == 0
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="even_test.go"
+package mathx
+
+import "testing"
+
+func TestIsEven(t *testing.T) {
+    tests := []struct {
+        name  string
+        input int
+        want  bool
+    }{
+        {"nol", 0, true},
+        {"juft", 4, true},
+        {"toq", 7, false},
+        {"manfiy_juft", -2, true},
+        {"manfiy_toq", -3, false},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            if got := IsEven(tt.input); got != tt.want {
+                t.Errorf("IsEven(%d) = %v; kutilgan %v", tt.input, got, tt.want)
+            }
+        })
+    }
+}
+```
+
+```bash
+$ go test -v -run TestIsEven
+=== RUN   TestIsEven
+=== RUN   TestIsEven/nol
+=== RUN   TestIsEven/juft
+=== RUN   TestIsEven/toq
+=== RUN   TestIsEven/manfiy_juft
+=== RUN   TestIsEven/manfiy_toq
+--- PASS: TestIsEven (0.00s)
+    --- PASS: TestIsEven/nol (0.00s)
+    --- PASS: TestIsEven/juft (0.00s)
+    --- PASS: TestIsEven/toq (0.00s)
+    --- PASS: TestIsEven/manfiy_juft (0.00s)
+    --- PASS: TestIsEven/manfiy_toq (0.00s)
+PASS
+ok      example/mathx   0.003s
+```
+
+Yangi holat topsangiz — jadvalga bitta qator qo'shasiz, xolos. `go test -run TestIsEven/toq` orqali aynan bittasini ishga tushira olasiz.
+
+</details>
+
+## 3. Xato qaytaradigan funksiyani testlash
+
+`Divide` nolga bo'lganda `error` qaytaradi. Ham muvaffaqiyatli, ham xato holatini tekshiradigan test yozing. Xato **kutilgan** joyda `err == nil` chiqsa, test yiqilsin.
+
+```go filename="div.go"
+package mathx
+
+import "errors"
+
+func Divide(a, b int) (int, error) {
+    if b == 0 {
+        return 0, errors.New("nolga bo'lish mumkin emas")
+    }
+    return a / b, nil
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="div_test.go"
+package mathx
+
+import "testing"
+
+func TestDivide(t *testing.T) {
+    // Muvaffaqiyatli holat
+    got, err := Divide(10, 2)
+    if err != nil {
+        t.Fatalf("kutilmagan xato: %v", err)
+    }
+    if got != 5 {
+        t.Errorf("Divide(10, 2) = %d; kutilgan 5", got)
+    }
+
+    // Xato holati — err nil BO'LMASLIGI kerak
+    _, err = Divide(1, 0)
+    if err == nil {
+        t.Error("Divide(1, 0) xato qaytarishi kerak edi, nil keldi")
+    }
+}
+```
+
+```bash
+$ go test -v -run TestDivide
+=== RUN   TestDivide
+--- PASS: TestDivide (0.00s)
+PASS
+ok      example/mathx   0.002s
+```
+
+Muvaffaqiyatli holatda `err != nil` chiqsa `Fatalf` bilan darrov to'xtaymiz (natijani tekshirishning ma'nosi yo'q). Xato holatida esa aksincha — `err == nil` chiqsa, bu bug.
+
+</details>
+
+## 4. Benchmark
+
+`Fib` (rekursiv Fibonacci) uchun benchmark yozing. `b.N` tsiklidan foydalaning va `go test -bench=.` bilan yugurtiring.
+
+```go filename="fib.go"
+package mathx
+
+func Fib(n int) int {
+    if n < 2 {
+        return n
+    }
+    return Fib(n-1) + Fib(n-2)
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="fib_test.go"
+package mathx
+
+import "testing"
+
+func BenchmarkFib(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        Fib(20) // o'lchanadigan kod
+    }
+}
+```
+
+```bash
+$ go test -bench=BenchmarkFib
+goos: linux
+goarch: amd64
+pkg: example/mathx
+cpu: 12th Gen Intel(R) Core(TM) i7-1255U
+BenchmarkFib-12    39420    30150 ns/op
+PASS
+ok      example/mathx   1.514s
+```
+
+`b.N` ni Go natija barqarorlashguncha o'zi oshiradi. `ns/op` — bitta `Fib(20)` chaqirig'iga ketgan o'rtacha nanosekund (aniq raqam mashinangizga bog'liq). Benchmarklar oddiy `go test` da ishga tushmaydi — `-bench` bayrog'i shart.
+
+</details>
+
+## 5. Fuzzing
+
+`Reverse` satrni rune bo'yicha teskari qiladi. Ikki marta teskari qilganda asli qaytishini fuzz test bilan tekshiring. Noto'g'ri UTF-8 kirishlarni `t.Skip()` bilan o'tkazib yuboring.
+
+```go filename="strx.go"
+package strx
+
+func Reverse(s string) string {
+    r := []rune(s)
+    for i, j := 0, len(r)-1; i < j; i, j = i+1, j-1 {
+        r[i], r[j] = r[j], r[i]
+    }
+    return string(r)
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="strx_test.go"
+package strx
+
+import (
+    "testing"
+    "unicode/utf8"
+)
+
+func FuzzReverse(f *testing.F) {
+    f.Add("salom") // seed misollari
+    f.Add("")
+    f.Add("12321")
+
+    f.Fuzz(func(t *testing.T, s string) {
+        if !utf8.ValidString(s) {
+            t.Skip() // noto'g'ri UTF-8 uchun round-trip kafolatlanmaydi
+        }
+        got := Reverse(Reverse(s))
+        if got != s {
+            t.Errorf("ikki marta Reverse(%q) = %q; asliga teng emas", s, got)
+        }
+    })
+}
+```
+
+```bash
+$ go test -fuzz=FuzzReverse -fuzztime=5s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/3 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 3/3 completed, now fuzzing with 12 workers
+fuzz: elapsed: 3s, execs: 412300 (137366/sec), new interesting: 15 total: 18
+fuzz: elapsed: 5s, execs: 701244 (144470/sec), new interesting: 19 total: 22
+PASS
+ok      example/strx    5.210s
+```
+
+`f.Add` seed'lardan boshlab fuzzer yangi kirish o'ylab topadi. `-fuzz` bo'lmasa, test faqat seed'lar bilan bir marta ishlaydi. Bug topilsa, kirish `testdata/fuzz/` ga saqlanib regression testga aylanadi.
+
+</details>
+
+## 6. HTTP handler'ni testlash
+
+`GreetHandler` `?name=` query'siga qarab salom beradi. `httptest.NewRecorder` va `ServeHTTP` bilan uni **tarmoqsiz** testlang: `?name=Ali` uchun status `200` va body `Salom, Ali!` bo'lsin.
+
+```go filename="handler.go"
+package web
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func GreetHandler(w http.ResponseWriter, r *http.Request) {
+    name := r.URL.Query().Get("name")
+    if name == "" {
+        name = "mehmon"
+    }
+    fmt.Fprintf(w, "Salom, %s!", name)
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="handler_test.go"
+package web
+
+import (
+    "io"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestGreetHandler(t *testing.T) {
+    req := httptest.NewRequest(http.MethodGet, "/?name=Ali", nil)
+    rec := httptest.NewRecorder() // javobni yozib oladi
+
+    GreetHandler(rec, req) // handler'ni to'g'ridan-to'g'ri chaqiramiz
+
+    res := rec.Result()
+    if res.StatusCode != http.StatusOK {
+        t.Fatalf("status = %d; kutilgan 200", res.StatusCode)
+    }
+    body, _ := io.ReadAll(res.Body)
+    if string(body) != "Salom, Ali!" {
+        t.Errorf("body = %q; kutilgan %q", body, "Salom, Ali!")
+    }
+}
+```
+
+```bash
+$ go test -v -run TestGreetHandler
+=== RUN   TestGreetHandler
+--- PASS: TestGreetHandler (0.00s)
+PASS
+ok      example/web     0.004s
+```
+
+`NewRecorder` soxta `ResponseWriter` beradi, `ServeHTTP` o'rniga handler'ni bevosita chaqiramiz — port ham, tarmoq ham kerak emas. Javobni `rec.Result()` orqali o'qiymiz.
+
+</details>
+
+## 7. HTTP klientni testlash
+
+`FetchBody` berilgan URL'dan javob body'sini o'qib qaytaradi. `httptest.NewServer` bilan soxta server ko'tarib, funksiyani uning `URL`'iga yo'naltirib testlang.
+
+```go filename="client.go"
+package web
+
+import (
+    "io"
+    "net/http"
+)
+
+func FetchBody(url string) (string, error) {
+    resp, err := http.Get(url)
+    if err != nil {
+        return "", err
+    }
+    defer resp.Body.Close()
+    b, err := io.ReadAll(resp.Body)
+    return string(b), err
+}
+```
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="client_test.go"
+package web
+
+import (
+    "fmt"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestFetchBody(t *testing.T) {
+    // Soxta server — istagan javobni qaytaradi.
+    srv := httptest.NewServer(http.HandlerFunc(
+        func(w http.ResponseWriter, r *http.Request) {
+            fmt.Fprint(w, "pong")
+        }))
+    defer srv.Close()
+
+    got, err := FetchBody(srv.URL) // kodimizni soxta URL'ga yo'naltiramiz
+    if err != nil {
+        t.Fatalf("kutilmagan xato: %v", err)
+    }
+    if got != "pong" {
+        t.Errorf("FetchBody = %q; kutilgan pong", got)
+    }
+}
+```
+
+```bash
+$ go test -v -run TestFetchBody
+=== RUN   TestFetchBody
+--- PASS: TestFetchBody (0.00s)
+PASS
+ok      example/web     0.006s
+```
+
+`httptest.NewServer` real, lekin vaqtinchalik lokal server ishga tushiradi; `srv.URL` unga ishlaydigan manzil beradi. Testdan keyin `defer srv.Close()` bilan yopamiz.
+
+</details>

@@ -1,0 +1,40 @@
+# Funksiyalar
+
+Funksiya — nom berilgan, qayta-qayta ishlatsa bo'ladigan kod bo'lagi. Ketma-ket kelgan parametrlar bir xil turda bo'lsa, turni faqat oxirgisiga yozsangiz kifoya. Go'da funksiya bir vaqtda bir nechta qiymat qaytara oladi (ko'pincha "natija va xatolik" ko'rinishida), qaytish qiymatlariga oldindan nom bersangiz esa oxirida bo'sh `return` ham yetadi.
+
+```go filename="funksiyalar.go"
+package main
+
+import "fmt"
+
+func plus(a, b int) int {
+    return a + b
+}
+
+func divmod(a, b int) (q, r int) {
+    q = a / b
+    r = a % b
+    return
+}
+
+func main() {
+    fmt.Println(plus(1, 2))
+
+    q, r := divmod(17, 5)
+    fmt.Println(q, r)
+
+    _, only := divmod(17, 5)
+    fmt.Println(only)
+}
+```
+
+```bash
+$ go run funksiyalar.go
+3
+3 2
+2
+```
+
+> Ko'p qiymat qaytarish va nomli qaytish qiymatlari — Go funksiyalarida eng ko'p ishlatadigan imkoniyatlar.
+
+**Manba / batafsil:** [Effective Go — Functions](https://go.dev/doc/effective_go#functions)

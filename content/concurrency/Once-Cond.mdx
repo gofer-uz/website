@@ -1,0 +1,94 @@
+# Once va Cond
+
+## sync.Once - bir martalik ishga tushirish
+
+Ba'zi ishlar butun dastur davomida faqat **bir marta** bajarilishi kerak: konfiguratsiyani yuklash, ulanishni ochish, kesh'ni tayyorlash. Ko'p goroutine bir vaqtda so'rab qolsa ham, ular baribir faqat bir marta bajarilishi shart. `sync.Once` aynan shuni kafolatlaydi:
+
+```go filename="once.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+var once sync.Once
+
+func initConfig() {
+    fmt.Println("config yuklandi (faqat bir marta)")
+}
+
+func main() {
+    var wg sync.WaitGroup
+
+    for range 5 {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            once.Do(initConfig) // 5 goroutine chaqiradi, 1 marta ishlaydi
+        }()
+    }
+
+    wg.Wait()
+    fmt.Println("main tugadi")
+}
+```
+
+```bash
+$ go run once.go
+config yuklandi (faqat bir marta)
+main tugadi
+```
+
+Beshta goroutine `once.Do` ni chaqirdi, ammo `initConfig` faqat bir marta ishladi. `Once.Do` yana bir narsani kafolatlaydi: qolgan goroutine'lar init tugaguncha kutib turadi — shuning uchun u lazy (talab tushganda yuklanadigan) singleton uchun juda mos keladi.
+
+**Qisqasi:** `once.Do(f)` `f` ni butun dastur davomida faqat bir marta, xavfsiz ishga tushiradi.
+
+Manba / batafsil: [pkg.go.dev/sync#Once](https://pkg.go.dev/sync#Once)
+
+## sync.Cond - shart kutish
+
+`sync.Cond` goroutine'larni biror shart bajarilishini kutib turishga qo'yadi va shart o'zgarganda ularni uyg'otadi. `Wait()` kutadi (bu paytda mutex'ni vaqtincha bo'shatib turadi), `Signal()` bittasini, `Broadcast()` esa hammasini uyg'otadi. Amaliyotda ko'pincha channel qulayroq bo'ladi, lekin klassik "kutuvchilar" holatida `Cond` ham ishlaydi:
+
+```go filename="cond.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func main() {
+    var mu sync.Mutex
+    cond := sync.NewCond(&mu)
+    ready := false
+
+    go func() {
+        mu.Lock()
+        ready = true
+        cond.Broadcast() // hamma kutuvchini uyg'otamiz
+        mu.Unlock()
+    }()
+
+    mu.Lock()
+    for !ready { // shartni doim loop ichida tekshiring
+        cond.Wait()
+    }
+    mu.Unlock()
+
+    fmt.Println("shart bajarildi, davom etamiz")
+}
+```
+
+```bash
+$ go run cond.go
+shart bajarildi, davom etamiz
+```
+
+Muhim jihat: `Wait()` ni doim `for !shart` loop ichida chaqiring — goroutine "yolg'ondan" uyg'onib ketishi mumkin, shuning uchun shartni qayta tekshirish shart.
+
+**Qisqasi:** `Cond` shart o'zgarganini kutish va bu haqda xabar berish uchun; oddiy holatlarda esa channel afzal.
+
+Manba / batafsil: [pkg.go.dev/sync#Cond](https://pkg.go.dev/sync#Cond)
+
+Hisoblagichlar uchun mutex'dan ham yengilroq yechim — `sync/atomic`, keyingi darsda.

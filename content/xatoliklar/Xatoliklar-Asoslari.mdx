@@ -1,0 +1,77 @@
+# Xatoliklar asoslari
+
+Ko'p tillarda xatolik `exception` bo'lib otiladi. Go'da esa boshqacha: xatolik (error) — bu oddiy qiymat, funksiya qaytaradigan natijaning bir qismi, xolos. Bu yondashuv "errors are values" deb ataladi. Kelishuvga ko'ra `error` eng oxirida qaytariladigan qiymat bo'ladi; hammasi joyida bo'lsa u `nil`, aks holda ichida sabab yoziladi.
+
+## `if err != nil` idiomasi
+
+Xatolikni tekshirishning eng keng tarqalgan usuli — funksiyani chaqirgandan keyin darrov `err`ni `nil` bilan solishtirish:
+
+```go filename="check.go"
+package main
+
+import (
+	"fmt"
+	"strconv"
+)
+
+func main() {
+	n, err := strconv.Atoi("olma")
+	if err != nil {
+		fmt.Println("xatolik:", err)
+		return
+	}
+	fmt.Println("son ikki barobar:", n*2)
+}
+```
+
+```bash
+$ go run check.go
+xatolik: strconv.Atoi: parsing "olma": invalid syntax
+```
+
+Naqsh har doim bir xil: chaqir, keyin darrov tekshir. Agar `err` `nil` bo'lmasa, uni qayta ishlaysiz; `nil` bo'lsa, natijadan bemalol foydalanaverasiz.
+
+## O'z xatoligingizni qaytarish
+
+Xatolikni o'zingiz ham yaratsangiz bo'ladi — o'zgarmas matn uchun `errors.New`, kontekst qo'shish uchun esa `fmt.Errorf` (u `fmt.Printf` kabi formatlaydi):
+
+```go filename="bolish.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+func bolish(a, b int) (int, error) {
+	if b == 0 {
+		return 0, errors.New("nolga bo'lish mumkin emas")
+	}
+	return a / b, nil
+}
+
+func main() {
+	if _, err := bolish(7, 0); err != nil {
+		fmt.Println("xatolik:", err)
+	}
+	if n, err := bolish(10, 2); err == nil {
+		fmt.Println("natija:", n)
+	}
+	fmt.Println(fmt.Errorf("yosh noto'g'ri: %d", -3))
+}
+```
+
+```bash
+$ go run bolish.go
+xatolik: nolga bo'lish mumkin emas
+natija: 5
+yosh noto'g'ri: -3
+```
+
+Xatolik bilan birga natija sifatida zero qiymat (`0`) qaytaryapmiz — chaqiruvchi `err` `nil` emasligini ko'rsa, natijaga umuman qaramasligi kerak. Kelishuvga ko'ra xatolik matni kichik harf bilan boshlanadi va nuqtasiz tugaydi, chunki xatoliklar ko'pincha bir-biriga ulanib ketadi.
+
+**Takeaway:** Go'da xatolik — bu qiymat; uni har bir chaqiruvdan keyin `if err != nil` bilan tekshiring.
+
+**Manba / batafsil:** [Effective Go - Errors](https://go.dev/doc/effective_go#errors), [errors paketi](https://pkg.go.dev/errors)
+
+Keyingi mavzuda xatolikning asosi bo'lgan `error` interfeysini ko'rib chiqamiz.

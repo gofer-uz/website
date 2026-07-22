@@ -1,0 +1,74 @@
+# Command
+
+**Muammo:** amalni (kim, nimani, qanday bajaradi) bitta obyektga o'rab olishingiz kerak - uni navbatga qo'yish, tarixini saqlash yoki bekor qilish (undo) uchun. Amalni oddiy funksiya chaqiruvi qilib qoldirsangiz, uni "ushlab" saqlab bo'lmaydi.
+
+**G'oya:** har bir amalni `Execute` (va kerak bo'lsa `Undo`) metodli obyektga aylantirasiz. "Invoker" ularni bajaradi va tarixga yozadi - shu bilan undo, qayta bajarish, navbat oson bo'ladi.
+
+```go filename="command.go"
+package main
+
+import "fmt"
+
+// Command - bajariladigan va bekor qilinadigan amal.
+type Command interface {
+	Execute()
+	Undo()
+}
+
+type Document struct {
+	text string
+}
+
+// AppendCommand hujjatga matn qo'shadi.
+type AppendCommand struct {
+	doc   *Document
+	added string
+}
+
+func (c *AppendCommand) Execute() { c.doc.text += c.added }
+func (c *AppendCommand) Undo()    { c.doc.text = c.doc.text[:len(c.doc.text)-len(c.added)] }
+
+// Invoker buyruqlarni bajaradi va tarixni saqlaydi.
+type Invoker struct {
+	history []Command
+}
+
+func (in *Invoker) Run(c Command) {
+	c.Execute()
+	in.history = append(in.history, c)
+}
+
+func (in *Invoker) UndoLast() {
+	if len(in.history) == 0 {
+		return
+	}
+	last := in.history[len(in.history)-1]
+	in.history = in.history[:len(in.history)-1]
+	last.Undo()
+}
+
+func main() {
+	doc := &Document{}
+	inv := &Invoker{}
+
+	inv.Run(&AppendCommand{doc: doc, added: "Salom"})
+	inv.Run(&AppendCommand{doc: doc, added: ", dunyo"})
+	inv.Run(&AppendCommand{doc: doc, added: "!!!"})
+	fmt.Printf("matn: %q\n", doc.text)
+
+	inv.UndoLast()
+	fmt.Printf("undo keyin: %q\n", doc.text)
+}
+```
+
+```bash
+$ go run command.go
+matn: "Salom, dunyo!!!"
+undo keyin: "Salom, dunyo"
+```
+
+Har bir amal obyekt bo'lgani uchun `Invoker` ularni tarixda saqlab, oxirgisini bekor qila oldi.
+
+**Qachon:** undo/redo, vazifa navbati, tranzaksiya jurnali kerak bo'lganda. Go note: undo shart bo'lmasa, ko'pincha `Command` interfeysi o'rniga oddiy `func()` yetadi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/command](https://refactoring.guru/design-patterns/command/go/example)

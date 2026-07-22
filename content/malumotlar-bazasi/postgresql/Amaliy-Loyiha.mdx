@@ -1,0 +1,131 @@
+# Amaliy Loyiha: auth-platform
+
+Bu bo'limdagi hamma narsa — `pgxpool`, migratsiyalar, parametrli so'rovlar, `UserRepository` interfeysi — bitta haqiqiy loyihada birlashadi. Jamoamiz shu maqsadda **auth-platform** ni ochiq nashr qildi: stdlib `net/http` (Go 1.22 routing), PostgreSQL va `pgx/v5` ustiga qurilgan sodda, o'qiladigan autentifikatsiya backendi.
+
+Kodni klonlab, o'zingiz ishga tushirib ko'rishingiz mumkin:
+
+- Repo: [github.com/gofer-uz/examples/auth-platform](https://github.com/gofer-uz/examples/tree/main/auth-platform)
+- Batafsil maqola: [blog.gopher.uz](https://blog.gopher.uz)
+
+## Loyiha tuzilishi
+
+```bash
+auth-platform/
+  docker-compose.yml         # postgres:16 (lokal dev)
+  migrations/
+    0001_init.sql            # users + sessions jadvallari
+  cmd/server/main.go         # config -> db pool -> repo -> service -> http
+  internal/
+    database/database.go     # pgxpool.New, Ping, Close, migratsiya runner
+    user/
+      user.go                # User modeli
+      repository.go          # UserRepository INTERFEYSI
+      postgres.go            # pgx implementatsiyasi
+    auth/service.go          # Register, Login, Authenticate, Logout
+    httpapi/                 # router, handlerlar, middleware
+```
+
+Diqqat qiling: `user/repository.go` da **interfeys**, `user/postgres.go` da uning `pgx` implementatsiyasi. Bu — [Repository Pattern](/malumotlar-bazasi/postgresql/Repository-Pattern) sahifasida ko'rgan naqshning aynan o'zi. MongoDB qo'shmoqchi bo'lsangiz, `user/mongo.go` yozasiz, servis va handlerlar tegilmaydi.
+
+## Sxema: migrations/0001_init.sql
+
+Loyihaning butun ma'lumot modeli ikki jadvalda. `gen_random_uuid()` va `citext` PostgreSQL ning standart imkoniyatlari (`pgcrypto` va `citext` kengaytmalari).
+
+```sql filename="migrations/0001_init.sql"
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS citext;
+
+CREATE TABLE users (
+    id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    email         citext      UNIQUE NOT NULL,
+    password_hash text        NOT NULL,
+    created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE sessions (
+    id         uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token      text        UNIQUE NOT NULL,
+    expires_at timestamptz NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+`email` uchun `citext` — katta-kichik harf farqsiz taqqoslash (`Aziz@` va `aziz@` bir xil). `sessions.user_id` esa `ON DELETE CASCADE`: foydalanuvchi o'chirilsa, uning sessiyalari ham avtomatik o'chadi.
+
+## Wiring: cmd/server/main.go
+
+`main` ning butun vazifasi — bo'laklarni ulash: config o'qish, havza ochish, migratsiyalarni qo'llash, repository va servisni qurish, HTTP serverni ishga tushirish.
+
+```go filename="cmd/server/main.go"
+package main
+
+import (
+    "context"
+    "log"
+    "net/http"
+
+    "github.com/gofer-uz/examples/auth-platform/internal/auth"
+    "github.com/gofer-uz/examples/auth-platform/internal/config"
+    "github.com/gofer-uz/examples/auth-platform/internal/database"
+    "github.com/gofer-uz/examples/auth-platform/internal/httpapi"
+    "github.com/gofer-uz/examples/auth-platform/internal/user"
+)
+
+func main() {
+    cfg := config.Load() // DATABASE_URL, JWT_SECRET, PORT ...
+    ctx := context.Background()
+
+    pool, err := database.New(ctx, cfg.DatabaseURL) // pgxpool.New + Ping
+    if err != nil {
+        log.Fatalf("baza: %v", err)
+    }
+    defer pool.Close()
+
+    if err := database.Migrate(ctx, pool); err != nil { // migrations/*.sql
+        log.Fatalf("migratsiya: %v", err)
+    }
+
+    users := user.NewPostgresRepository(pool) // UserRepository interfeysi
+    authSvc := auth.NewService(users, cfg.JWTSecret)
+    handler := httpapi.NewRouter(authSvc)
+
+    log.Printf("server ishlayapti :%s", cfg.Port)
+    log.Fatal(http.ListenAndServe(":"+cfg.Port, handler))
+}
+```
+
+Butun oqim shu yerda ko'rinadi: `pool` bir marta ochiladi va `defer pool.Close()` bilan yopiladi ([Ulanish](/malumotlar-bazasi/postgresql/Ulanish)), migratsiyalar dastur boshida qo'llanadi ([Migratsiyalar](/malumotlar-bazasi/postgresql/Migratsiyalar)), repository esa interfeys sifatida servisga uzatiladi.
+
+## Ishga tushirish
+
+Loyihani klonlab, ikki buyruq bilan ko'tarasiz:
+
+```bash
+$ git clone https://github.com/gofer-uz/examples
+$ cd examples/auth-platform
+$ docker compose up -d          # postgres:16 ni ko'taradi
+$ export DATABASE_URL="postgres://gopher:secret@localhost:5432/auth"
+$ go run ./cmd/server
+2026/07/22 10:00:00 server ishlayapti :8080
+```
+
+Endi API bilan gaplashamiz — ro'yxatdan o'tish va kirish:
+
+```bash
+$ curl -s -X POST localhost:8080/api/auth/register \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"aziz@example.uz","password":"parol12345"}'
+{"id":"7c9e...","email":"aziz@example.uz"}
+
+$ curl -s -X POST localhost:8080/api/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"aziz@example.uz","password":"parol12345"}'
+{"access_token":"eyJhbGciOiJIUzI1NiIsIn..."}
+```
+
+`register` ichida parol `bcrypt` bilan hashlanadi va `postgresRepository.Create` orqali `INSERT ... RETURNING id` bilan yoziladi — aynan [CRUD](/malumotlar-bazasi/postgresql/CRUD) da ko'rgan usul. `login` esa `ByEmail` bilan foydalanuvchini topadi, parolni tekshiradi va `sessions` jadvaliga yangi qator qo'shadi.
+
+Manba / batafsil: [github.com/gofer-uz/examples/auth-platform](https://github.com/gofer-uz/examples/tree/main/auth-platform)
+
+Bo'lim shu yerda yakunlanadi. Kodni klonlang, o'zgartiring, sindiring va qayta yig'ing — eng yaxshi o'rganish shu. MongoDB implementatsiyasini qo'shib ko'rish esa a'lo mashq: interfeys tayyor, faqat `mongo.go` yozish qoldi.

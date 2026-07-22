@@ -1,0 +1,127 @@
+# io va bufio
+
+`io` — Go dagi oqimlarning (stream) asosi. Fayl, tarmoq, xotira — hammasi bir xil ikki interfeys orqali ishlaydi. `bufio` esa buferlash bilan o'qish/yozishni tezlashtiradi.
+
+## io.Reader va io.Writer
+
+Butun Go standart kutubxonasi ikki kichik interfeysga tayanadi: `Reader` (bittagina `Read` metodi) va `Writer` (bittagina `Write` metodi). Shu tufayli faylga yozadigan kod tarmoqqa ham, xotiraga ham xuddi shunday yozadi.
+
+```go filename="reader.go"
+package main
+
+import (
+    "fmt"
+    "io"
+    "strings"
+)
+
+func main() {
+    var r io.Reader = strings.NewReader("salom dunyo")
+    buf := make([]byte, 5)
+    n, _ := r.Read(buf)
+    fmt.Printf("%d bayt: %q\n", n, buf[:n])
+}
+```
+
+```bash
+$ go run reader.go
+5 bayt: "salom"
+```
+
+Takeaway: `strings.NewReader`, fayl, `resp.Body` — hammasi `io.Reader`; kodingizni bitta turga bog'lamang.
+
+Manba / batafsil: [pkg.go.dev/io#Reader](https://pkg.go.dev/io#Reader)
+
+## io.Copy
+
+`io.Copy` `Reader` dan `Writer` ga butun ma'lumotni ko'chiradi — o'zingiz sikl yozmasdan. Fayl nusxalash, javobni ekranga chiqarish uchun ideal.
+
+```go filename="copy.go"
+package main
+
+import (
+    "io"
+    "os"
+    "strings"
+)
+
+func main() {
+    src := strings.NewReader("bu matn to'g'ridan-to'g'ri ekranga ketadi\n")
+    io.Copy(os.Stdout, src)
+}
+```
+
+```bash
+$ go run copy.go
+bu matn to'g'ridan-to'g'ri ekranga ketadi
+```
+
+Takeaway: `io.Copy(dst, src)` — oqimni oqimga ulashning eng qisqa yo'li.
+
+Manba / batafsil: [pkg.go.dev/io#Copy](https://pkg.go.dev/io#Copy)
+
+## bufio.Scanner — qatorma-qator o'qish
+
+Matnni qatorlarga bo'lib o'qishning eng qulay yo'li — `bufio.Scanner`. `Scan()` har chaqiruvda keyingi qatorga o'tadi, `Text()` esa joriy qatorni beradi.
+
+```go filename="scanner.go"
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "strings"
+)
+
+func main() {
+    input := "bir\nikki\nuch"
+    scanner := bufio.NewScanner(strings.NewReader(input))
+    n := 0
+    for scanner.Scan() {
+        n++
+        fmt.Printf("%d: %s\n", n, scanner.Text())
+    }
+}
+```
+
+```bash
+$ go run scanner.go
+1: bir
+2: ikki
+3: uch
+```
+
+Takeaway: `os.Stdin` ni ham shu tarzda o'qib, foydalanuvchidan qator olasiz.
+
+Manba / batafsil: [pkg.go.dev/bufio#Scanner](https://pkg.go.dev/bufio#Scanner)
+
+## bufio.NewReader
+
+Har bir `Read` chaqiruvi tizim chaqiruvi (syscall) bo'lishi mumkin — sekin. `bufio.NewReader` ma'lumotni katta bo'laklarda o'qib buferga saqlaydi. `ReadString` ajratuvchigacha (masalan `\n`) o'qiydi.
+
+```go filename="bufreader.go"
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "strings"
+)
+
+func main() {
+    r := bufio.NewReader(strings.NewReader("Ali,27,Toshkent\n"))
+    line, _ := r.ReadString('\n')
+    fmt.Printf("%q\n", line)
+}
+```
+
+```bash
+$ go run bufreader.go
+"Ali,27,Toshkent\n"
+```
+
+Takeaway: `Scanner` — oddiy qatorlarga, `NewReader.ReadString` — ajratuvchini saqlab qolish kerak bo'lganda.
+
+Manba / batafsil: [pkg.go.dev/bufio#NewReader](https://pkg.go.dev/bufio#NewReader)
+
+Keyingi qismda `os` va `flag` — fayllar va CLI argumentlari bilan ishlashni ko'ramiz.

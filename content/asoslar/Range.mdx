@@ -1,0 +1,37 @@
+# Range
+
+To'plamlar ustidan yurishning eng qulay yo'li — `range`. `slice` da indeks va qiymatni, `map` da kalit va qiymatni, `string` da esa bayt indeksi bilan **rune** (Unicode belgi) ni qaytaradi. Go 1.22 dan boshlab oddiy butun son ustidan ham to'g'ridan-to'g'ri yurish mumkin: `for i := range n`.
+
+```go filename="range.go"
+package main
+
+import "fmt"
+
+func main() {
+    for i, v := range []int{2, 4, 6} {
+        fmt.Printf("%d:%d ", i, v)
+    }
+    fmt.Println()
+
+    for i, r := range "gophèr" {
+        fmt.Printf("%d=%c ", i, r)
+    }
+    fmt.Println()
+
+    for i := range 3 {
+        fmt.Print(i, " ")
+    }
+    fmt.Println()
+}
+```
+
+```bash
+$ go run range.go
+0:2 1:4 2:6 
+0=g 1=o 2=p 3=h 4=è 6=r 
+0 1 2 
+```
+
+> `string` ustidan `range` runelarni qaytaradi — `è` ikki bayt egallagani uchun keyingi indeks `5` emas, `6` bo'ladi.
+
+**Manba / batafsil:** [Go spec — For statements (range)](https://go.dev/ref/spec#For_range)

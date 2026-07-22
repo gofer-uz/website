@@ -1,0 +1,70 @@
+# Workspace - Ko'p Modulli Ish Muhiti
+
+Ba'zan bir vaqtda bir nechta modul ustida ishlaysiz - kutubxona yozyapsiz va shu zahoti uni sinaydigan dastur ham bor. Go 1.18 dan boshlab bu vaziyat uchun **workspace** mavjud.
+
+## Muammo va yechim
+
+`app` moduli lokal `mat` modulini import qiladi, lekin `mat` hali hech qayerga chiqarilmagan. Workspace Go ga "bu modullarni internetdan emas, lokal papkalardan ol" deb aytadi. `ish/` papkasida boshlaymiz:
+
+```bash
+$ cd ish
+$ go work init ./mat ./app
+```
+
+Bu `go.work` faylini yaratadi:
+
+```go filename="go.work"
+go 1.22
+
+use (
+	./mat
+	./app
+)
+```
+
+Keyinroq yangi modul qo'shish: `go work use ./yangi-modul`.
+
+**Xulosa:** `go work init`/`go work use` bir nechta lokal modulni bitta ish muhitiga bog'laydi.
+
+## To'liq misol
+
+```go filename="mat/mat.go"
+package mat
+
+func Qosh(a, b int) int { return a + b }
+```
+
+```go filename="app/main.go"
+package main
+
+import (
+	"fmt"
+
+	"github.com/gofer-uz/mat"
+)
+
+func main() {
+	fmt.Println(mat.Qosh(2, 3))
+}
+```
+
+`app/go.mod` da `require github.com/gofer-uz/mat v0.0.0` bo'lsa ham, workspace importni `./mat` papkasidan oladi:
+
+```bash
+$ go run ./app
+5
+```
+
+`mat` ga kiritgan har bir o'zgarish dasturda darrov aks etadi - `go get` yoki e'lon qilish shart emas.
+
+**Xulosa:** workspace lokal o'zgarishlarni darrov ko'rish imkonini beradi.
+
+## go.work ni git ga qo'shmang
+
+`go.work` lokal papka yo'llariga bog'liq - boshqa kompyuterda ishlamaydi. `.gitignore` ga `go.work` va `go.work.sum` ni yozing. Ish tugagach kutubxonani versiya bilan chiqarasiz (`v1.0.0`) va dasturda `go get github.com/gofer-uz/mat@v1.0.0` qilib haqiqiy versiyaga o'tasiz.
+
+**Xulosa:** workspace faqat ishlab chiqish davomida yashaydi, repozitoriyga kirmaydi.
+
+Manba / batafsil: [go.dev/ref/mod - Workspaces](https://go.dev/ref/mod#workspaces) va [Workspaces bo'yicha qo'llanma](https://go.dev/doc/tutorial/workspaces)
+
+Endi bularni amalda qanday joylashtirish - **loyiha tuzilishi** haqida gaplashamiz.

@@ -1,0 +1,57 @@
+# Decorator
+
+**Muammo:** mavjud obyektga yangi xatti-harakat (log, vaqt o'lchash, kesh) qo'shmoqchisiz, lekin uning kodini o'zgartirmasdan va har bir kombinatsiya uchun alohida tur yaratmasdan.
+
+**G'oya:** obyektni **bir xil interfeysli** boshqa obyekt bilan o'raysiz. O'ragich (decorator) o'z ishini bajaradi va ichkaridagiga murojaat qiladi. Qatlamlarni istagancha ustma-ust qo'yish mumkin - bu HTTP middleware'ning asosidir.
+
+```go filename="decorator.go"
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type Handler interface {
+	Handle(request string) string
+}
+
+// Yadro handler.
+type EchoHandler struct{}
+
+func (EchoHandler) Handle(request string) string {
+	return "javob: " + strings.ToUpper(request)
+}
+
+// LoggingDecorator boshqa Handler ni o'rab, log qo'shadi.
+type LoggingDecorator struct {
+	next Handler
+}
+
+func (d LoggingDecorator) Handle(request string) string {
+	fmt.Printf("LOG: so'rov keldi -> %q\n", request)
+	resp := d.next.Handle(request)
+	fmt.Printf("LOG: javob qaytdi -> %q\n", resp)
+	return resp
+}
+
+func main() {
+	var h Handler = EchoHandler{}
+	h = LoggingDecorator{next: h} // yadroni o'raymiz
+
+	fmt.Println(h.Handle("salom"))
+}
+```
+
+```bash
+$ go run decorator.go
+LOG: so'rov keldi -> "salom"
+LOG: javob qaytdi -> "javob: SALOM"
+javob: SALOM
+```
+
+`EchoHandler` o'zgarmadi; log qatlamini uning ustidan kiydik. Yana bir decorator qo'shsangiz, `h = TimingDecorator{next: h}` deb davom etasiz.
+
+**Qachon:** funksionallikni qatlam-qatlam qo'shish kerak bo'lganda. Go note: bu pattern Go da middleware ko'rinishida gullab-yashnaydi - Middleware sahifasiga qarang.
+
+Manba / batafsil: [refactoring.guru/design-patterns/decorator](https://refactoring.guru/design-patterns/decorator/go/example)

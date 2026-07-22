@@ -1,0 +1,52 @@
+# Stack va Queue
+
+Stek (stack) va navbat (queue) - bitta g'oyaning ikki ko'rinishi: gap elementlarni qaysi tartibda chiqarib olishingizda. Stek **LIFO** (Last In, First Out) - oxirgi qo'yilgani birinchi chiqadi, xuddi tovoq ustiga tovoq taxlaganday. Navbat esa **FIFO** (First In, First Out) - haqiqiy navbat kabi, birinchi kelgan birinchi ketadi.
+
+Go da ikkovini ham slice bilan yasash oson - alohida tur o'ylab topish shart emas.
+
+## Murakkablik (complexity)
+
+| Amal | Stek | Navbat |
+| --- | --- | --- |
+| Qo'shish (push/enqueue) | `O(1)` | `O(1)` |
+| Olib chiqish (pop/dequeue) | `O(1)` | `O(1)`* |
+
+*Navbatda boshidan olib chiqishda `s = s[1:]` ishlatilsa `O(1)`, lekin eski massiv xotirada qolib ketadi. Hajm katta bo'lsa `container/list` yoki halqasimon bufer (ring buffer) afzal.
+
+## Slice bilan
+
+```go filename="stackqueue.go"
+package main
+
+import "fmt"
+
+func main() {
+    // STACK (LIFO)
+    var stack []int
+    stack = append(stack, 1, 2, 3) // push
+    top := stack[len(stack)-1]     // peek
+    stack = stack[:len(stack)-1]   // pop
+    fmt.Println("stack pop qildi:", top, "qoldi:", stack)
+
+    // QUEUE (FIFO)
+    var queue []int
+    queue = append(queue, 1, 2, 3) // enqueue
+    front := queue[0]              // peek
+    queue = queue[1:]             // dequeue
+    fmt.Println("queue dequeue qildi:", front, "qoldi:", queue)
+}
+```
+
+```bash
+$ go run stackqueue.go
+stack pop qildi: 3 qoldi: [1 2]
+queue dequeue qildi: 1 qoldi: [2 3]
+```
+
+## container/list va channel
+
+Ikkita muqobil bor. `container/list` - ikki tomonlama bog'langan ro'yxat, `PushBack`/`PushFront`/`Remove` metodlarini beradi. Goroutine lar orasida ishlaydigan navbat kerak bo'lsa, `channel` tabiiy tanlov: `ch <- v` bilan qo'yasiz, `<-ch` bilan olasiz, u o'zi xavfsiz sinxronlashtiradi.
+
+**Xulosa:** Stek va navbat - shunchaki tartib qoidasi. Ko'p holatda slice yetarli; parallel ish (concurrency) kerak bo'lsa channel ishlating.
+
+**Manba / batafsil:** [container/list - pkg.go.dev](https://pkg.go.dev/container/list)

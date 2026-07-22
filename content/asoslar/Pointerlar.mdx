@@ -1,0 +1,40 @@
+# Pointerlar
+
+Ko'rsatkich (pointer) — o'zgaruvchining xotiradagi **manzilini** saqlaydigan qiymat. `&x` manzilni oladi, `*p` esa o'sha manzildagi qiymatning o'ziga boradi. Go'da argumentlar funksiyaga nusxa bo'lib o'tadi, shuning uchun funksiya ichidan tashqaridagi o'zgaruvchini haqiqatan o'zgartirmoqchi bo'lsak, uning manzilini (`*int`) uzatamiz. Hech qiymat berilmagan ko'rsatkich `nil` bo'ladi.
+
+```go filename="pointerlar.go"
+package main
+
+import "fmt"
+
+func zeroval(val int) {
+    val = 0
+}
+
+func zeroptr(ptr *int) {
+    *ptr = 0
+}
+
+func main() {
+    i := 1
+    zeroval(i)
+    fmt.Println("zeroval keyin:", i)
+
+    zeroptr(&i)
+    fmt.Println("zeroptr keyin:", i)
+
+    var np *int
+    fmt.Println("nil pointer:", np == nil)
+}
+```
+
+```bash
+$ go run pointerlar.go
+zeroval keyin: 1
+zeroptr keyin: 0
+nil pointer: true
+```
+
+> Nusxa (`int`) asl qiymatga tegmaydi; manzil (`*int`) orqali esa uni chindan o'zgartira olamiz.
+
+**Manba / batafsil:** [A Tour of Go — Pointers](https://go.dev/tour/moretypes/1)

@@ -1,0 +1,95 @@
+# Context
+
+`context.Context` — goroutine'larga "to'xta" signali va muddatni yetkazishning standart usuli. Uzoq davom etadigan operatsiyani (tarmoq so'rovi, DB so'rovi) bekor qilish yoki unga timeout qo'yish kerak bo'lganda ishlatiladi. Har bir context `ctx.Done()` orqali bir channel beradi; o'sha channel yopilsa — "to'xta" degani.
+
+Odatda ildizdan boshlaymiz: `context.Background()`. Undan `WithCancel`, `WithTimeout` yoki `WithValue` bilan yangi, "hosila" context yasaymiz.
+
+## WithCancel - qo'lda to'xtatish
+
+```go filename="cancel.go"
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+)
+
+func worker(ctx context.Context) {
+    for {
+        select {
+        case <-ctx.Done(): // bekor qilindi
+            fmt.Println("ishchi to'xtadi:", ctx.Err())
+            return
+        default:
+            fmt.Println("ishlayapman...")
+            time.Sleep(50 * time.Millisecond)
+        }
+    }
+}
+
+func main() {
+    ctx, cancel := context.WithCancel(context.Background())
+
+    go worker(ctx)
+    time.Sleep(120 * time.Millisecond)
+    cancel() // to'xtash signali
+
+    time.Sleep(50 * time.Millisecond)
+    fmt.Println("main tugadi")
+}
+```
+
+```bash
+$ go run cancel.go
+ishlayapman...
+ishlayapman...
+ishlayapman...
+ishchi to'xtadi: context canceled
+main tugadi
+```
+
+`cancel()` chaqirilishi bilan `ctx.Done()` yopildi va goroutine `select` orqali darhol chiqib ketdi. `cancel` ni har doim chaqiring (odatda `defer cancel()`) — aks holda resurs oqib ketadi.
+
+## WithTimeout va WithValue
+
+`context.WithTimeout` belgilangan vaqt o'tishi bilan context'ni o'zi bekor qiladi — timeout uchun eng ko'p ishlatiladigan usul. `context.WithValue` esa so'rov davomida biror ma'lumotni (masalan, request ID) olib yuradi:
+
+```go filename="timeout.go"
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+)
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+    defer cancel()
+
+    ctx = context.WithValue(ctx, "reqID", "abc-123")
+
+    select {
+    case <-time.After(300 * time.Millisecond): // sekin ish
+        fmt.Println("ish tugadi")
+    case <-ctx.Done():
+        fmt.Println("reqID:", ctx.Value("reqID"))
+        fmt.Println("bekor qilindi:", ctx.Err())
+    }
+}
+```
+
+```bash
+$ go run timeout.go
+reqID: abc-123
+bekor qilindi: context deadline exceeded
+```
+
+Ishga 300ms kerak edi, context esa 100ms da o'zini bekor qildi — `ctx.Err()` bunday holatda sababni (`deadline exceeded`) qaytaradi. Context har doim funksiyaning **birinchi argumenti** bo'ladi: `func Do(ctx context.Context, ...)`. `WithValue` ni faqat so'rov doirasidagi metama'lumot uchun ishlating, oddiy parametrlarni uzatish uchun emas.
+
+**Qisqasi:** context bekor qilish va muddatni goroutine'lar bo'ylab tarqatadi; `ctx.Done()` ni kuzating, `cancel()` ni `defer` bilan chaqiring.
+
+Manba / batafsil: [pkg.go.dev/context](https://pkg.go.dev/context), [go.dev/blog/context](https://go.dev/blog/context)
+
+Endi shu asboblarni birlashtirib, amaliy naqsh — worker pool'ni quramiz.

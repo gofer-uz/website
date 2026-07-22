@@ -1,0 +1,45 @@
+# Map
+
+`map` — kalit va qiymat juftliklarini saqlaydigan tur (boshqa tillardagi dictionary). Mavjud bo'lmagan kalitni so'rasangiz, xato bermay standart qiymatni qaytaradi, shuning uchun kalit bor-yo'qligini **comma-ok** (`v, ok := m[k]`) orqali tekshiramiz. `delete` bilan o'chiramiz. `range` da elementlar tartibi kafolatlanmaydi — natija har safar bir xil chiqishi uchun kalitlarni `sort` bilan tartiblaymiz.
+
+```go filename="map.go"
+package main
+
+import (
+    "fmt"
+    "sort"
+)
+
+func main() {
+    m := map[string]int{"olma": 5, "nok": 3}
+    m["uzum"] = 8
+
+    v, ok := m["olma"]
+    fmt.Println(v, ok)
+    _, ok = m["banan"]
+    fmt.Println(ok)
+
+    delete(m, "nok")
+
+    keys := make([]string, 0, len(m))
+    for k := range m {
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
+    for _, k := range keys {
+        fmt.Printf("%s=%d\n", k, m[k])
+    }
+}
+```
+
+```bash
+$ go run map.go
+5 true
+false
+olma=5
+uzum=8
+```
+
+> `map` ni `range` qilganda tartib tasodifiy bo'ladi; bir xil natija kerak bo'lsa kalitlarni oldin tartiblang.
+
+**Manba / batafsil:** [Go blog — Go maps in action](https://go.dev/blog/maps)

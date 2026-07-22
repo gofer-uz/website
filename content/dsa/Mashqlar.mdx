@@ -1,0 +1,302 @@
+# Mashqlar
+
+Bu yerda bo'lim bo'yicha klassik masalalar to'plangan - linked list, stack, binary search, graf, DP va saralash. Har birini avval o'zingiz qog'ozda yoki editorda yozib ko'ring, keyingina yechimni oching. Yodda tutish emas, mustaqil yechish ko'proq foyda beradi.
+
+## 1. Linked list'ni teskari aylantirish
+
+Bir tomonlama linked list berilgan. Uni **joyida** (qo'shimcha ro'yxatsiz) teskari aylantiring va yangi bosh (head) node'ni qaytaring. Vaqt `O(n)`, xotira `O(1)` bo'lsin.
+
+Masalan `1 -> 2 -> 3 -> 4 -> 5` uchun natija `5 4 3 2 1`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type Node struct {
+    Val  int
+    Next *Node
+}
+
+// Vaqt: O(n), Xotira: O(1)
+func reverse(head *Node) *Node {
+    var prev *Node
+    for head != nil {
+        next := head.Next // keyingini eslab qolamiz
+        head.Next = prev  // ko'rsatkichni orqaga buramiz
+        prev = head
+        head = next
+    }
+    return prev
+}
+
+func main() {
+    var head *Node
+    for i := 5; i >= 1; i-- {
+        head = &Node{Val: i, Next: head}
+    }
+    head = reverse(head)
+    for n := head; n != nil; n = n.Next {
+        fmt.Printf("%d ", n.Val)
+    }
+    fmt.Println()
+    // Natija: 5 4 3 2 1
+}
+```
+
+</details>
+
+## 2. Qavslar to'g'ri joylashganmi (stack bilan)
+
+Faqat `(`, `)`, `[`, `]`, `{`, `}` belgilaridan iborat satr berilgan. Har bir ochilgan qavs to'g'ri turdagi qavs bilan va to'g'ri tartibda yopilganmi - `true`/`false` qaytaring. Stack'dan foydalaning. Vaqt `O(n)`.
+
+Masalan `"()[]{}"` -> `true`, `"([)]"` -> `false`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+// Vaqt: O(n), Xotira: O(n)
+func isValid(s string) bool {
+    pairs := map[rune]rune{')': '(', ']': '[', '}': '{'}
+    var stack []rune
+    for _, c := range s {
+        switch c {
+        case '(', '[', '{':
+            stack = append(stack, c) // push
+        case ')', ']', '}':
+            // stack bo'sh yoki mos ochuvchi qavs yo'q
+            if len(stack) == 0 || stack[len(stack)-1] != pairs[c] {
+                return false
+            }
+            stack = stack[:len(stack)-1] // pop
+        }
+    }
+    return len(stack) == 0 // yopilmagan qavs qolmasin
+}
+
+func main() {
+    fmt.Println(isValid("()[]{}")) // true
+    fmt.Println(isValid("([)]"))   // false
+    fmt.Println(isValid("(]"))     // false
+}
+```
+
+</details>
+
+## 3. Binary search
+
+O'sish tartibida saralangan `int` slice va qidirilayotgan `target` berilgan. `target`ning indeksini qaytaring, topilmasa `-1`. Vaqt `O(log n)`.
+
+Masalan `[1 3 5 7 9 11]` da `7` -> `3`, `4` -> `-1`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+// Vaqt: O(log n), Xotira: O(1)
+func binarySearch(a []int, target int) int {
+    lo, hi := 0, len(a)-1
+    for lo <= hi {
+        mid := lo + (hi-lo)/2 // overflow'dan xoli o'rta
+        switch {
+        case a[mid] == target:
+            return mid
+        case a[mid] < target:
+            lo = mid + 1
+        default:
+            hi = mid - 1
+        }
+    }
+    return -1
+}
+
+func main() {
+    a := []int{1, 3, 5, 7, 9, 11}
+    fmt.Println(binarySearch(a, 7)) // 3
+    fmt.Println(binarySearch(a, 4)) // -1
+}
+```
+
+</details>
+
+## 4. Two Sum (hash jadval bilan)
+
+Butun sonlar slice'i va `target` berilgan. Yig'indisi `target`ga teng bo'lgan ikki elementning indekslarini qaytaring. Bitta o'tishda, hash jadval yordamida `O(n)` da yeching (ichma-ich sikl `O(n^2)` emas).
+
+Masalan `nums = [2 7 11 15]`, `target = 9` -> `[0 1]`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+// Vaqt: O(n), Xotira: O(n)
+func twoSum(nums []int, target int) []int {
+    seen := make(map[int]int) // qiymat -> indeks
+    for i, n := range nums {
+        if j, ok := seen[target-n]; ok {
+            return []int{j, i}
+        }
+        seen[n] = i
+    }
+    return nil
+}
+
+func main() {
+    fmt.Println(twoSum([]int{2, 7, 11, 15}, 9)) // [0 1]
+    fmt.Println(twoSum([]int{3, 2, 4}, 6))      // [1 2]
+}
+```
+
+</details>
+
+## 5. Grafda BFS (kenglik bo'yicha qidiruv)
+
+Graf `map[int][]int` ko'rinishida qo'shnilar ro'yxati sifatida berilgan. Berilgan `start` cho'qqidan boshlab BFS bilan aylanib chiqing va tashrif tartibini qaytaring. Queue va `visited` to'plamidan foydalaning. Vaqt `O(V+E)`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+// Vaqt: O(V+E), Xotira: O(V)
+func bfs(graph map[int][]int, start int) []int {
+    visited := map[int]bool{start: true}
+    queue := []int{start}
+    var order []int
+    for len(queue) > 0 {
+        node := queue[0]  // navbat boshidan olamiz (FIFO)
+        queue = queue[1:]
+        order = append(order, node)
+        for _, next := range graph[node] {
+            if !visited[next] {
+                visited[next] = true
+                queue = append(queue, next)
+            }
+        }
+    }
+    return order
+}
+
+func main() {
+    graph := map[int][]int{
+        1: {2, 3},
+        2: {4},
+        3: {4, 5},
+        4: {6},
+        5: {6},
+        6: {},
+    }
+    fmt.Println(bfs(graph, 1)) // [1 2 3 4 5 6]
+}
+```
+
+</details>
+
+## 6. Fibonacci - memoization bilan
+
+`n`-Fibonacci sonini hisoblang, lekin naive rekursiyaning `O(2^n)` sekinligiga tushib qolmang. Map orqali kesh (memoization) qo'shib, murakkablikni `O(n)` ga tushiring.
+
+`fib(0..10)` -> `0 1 1 2 3 5 8 13 21 34 55`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+// Vaqt: O(n), Xotira: O(n)
+func fib(n int, memo map[int]int) int {
+    if n < 2 {
+        return n
+    }
+    if v, ok := memo[n]; ok {
+        return v // kesh'dan olamiz
+    }
+    memo[n] = fib(n-1, memo) + fib(n-2, memo)
+    return memo[n]
+}
+
+func main() {
+    memo := map[int]int{}
+    for i := 0; i <= 10; i++ {
+        fmt.Printf("%d ", fib(i, memo))
+    }
+    fmt.Println()
+    // Natija: 0 1 1 2 3 5 8 13 21 34 55
+}
+```
+
+</details>
+
+## 7. Merge sort
+
+Butun sonlar slice'ini merge sort (birlashtirib saralash) bilan tartiblang. G'oya: slice'ni ikkiga bo'lib, har yarmini rekursiv saralab, so'ng ikki saralangan yarmni birlashtirasiz. Vaqt `O(n log n)`.
+
+`[5 2 9 1 5 6]` -> `[1 2 5 5 6 9]`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+// Vaqt: O(n log n), Xotira: O(n)
+func mergeSort(a []int) []int {
+    if len(a) <= 1 {
+        return a
+    }
+    mid := len(a) / 2
+    left := mergeSort(a[:mid])
+    right := mergeSort(a[mid:])
+    return merge(left, right)
+}
+
+// ikki saralangan slice'ni bitta saralangan slice'ga birlashtiradi
+func merge(l, r []int) []int {
+    out := make([]int, 0, len(l)+len(r))
+    i, j := 0, 0
+    for i < len(l) && j < len(r) {
+        if l[i] <= r[j] {
+            out = append(out, l[i])
+            i++
+        } else {
+            out = append(out, r[j])
+            j++
+        }
+    }
+    out = append(out, l[i:]...) // qolgan quyruqlar
+    out = append(out, r[j:]...)
+    return out
+}
+
+func main() {
+    fmt.Println(mergeSort([]int{5, 2, 9, 1, 5, 6})) // [1 2 5 5 6 9]
+}
+```
+
+</details>
+
+Bu masalalar intervyularda tez-tez uchraydi. Yechib bo'lgach, har birining Big-O'sini o'zingizga ovoz chiqarib tushuntirib ko'ring - shundagina g'oya mustahkam o'rnashadi.

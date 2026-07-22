@@ -1,0 +1,36 @@
+# Variadic Funksiyalar
+
+Nechta argument kelishini oldindan bilmasak, **variadic** funksiya ishlatamiz — xuddi `fmt.Println` dagidek. Oxirgi parametr turidan oldin `...` qo'ysak, funksiya o'sha turdan xohlagancha argument qabul qiladi va ichkarida ular oddiy `slice` bo'lib ko'rinadi. Tayyor `slice` ni uzatmoqchi bo'lsak, uning nomidan keyin `...` yozamiz.
+
+```go filename="variadic.go"
+package main
+
+import "fmt"
+
+func sum(nums ...int) int {
+    total := 0
+    for _, n := range nums {
+        total += n
+    }
+    return total
+}
+
+func main() {
+    fmt.Println(sum(1, 2, 3))
+    fmt.Println(sum())
+
+    nums := []int{5, 10, 15}
+    fmt.Println(sum(nums...))
+}
+```
+
+```bash
+$ go run variadic.go
+6
+0
+30
+```
+
+> `nums ...int` kelgan argumentlarni `slice` ga yig'adi; `slice...` esa aksincha, uni yana argumentlarga yoyadi.
+
+**Manba / batafsil:** [Go spec — Passing arguments to ... parameters](https://go.dev/ref/spec#Passing_arguments_to_..._parameters)

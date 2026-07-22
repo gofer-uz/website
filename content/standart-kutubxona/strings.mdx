@@ -1,0 +1,157 @@
+# strings
+
+Matn ustidagi kundalik ishlar: qidirish, bo'laklarga bo'lish, birlashtirish, tozalash. Go'da `string` o'zgarmas (immutable) bo'lgani uchun bu funksiyalarning hech biri joyida o'zgartirmaydi — har safar yangi string qaytaradi.
+
+## Qidirish
+
+`Contains`, `HasPrefix`, `HasSuffix` — `bool` qaytaradi; `Index` esa topilgan o'rinning indeksini, topilmasa `-1` ni beradi.
+
+```go filename="search.go"
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+func main() {
+    s := "salom dunyo"
+    fmt.Println(strings.Contains(s, "dunyo"))  // true
+    fmt.Println(strings.HasPrefix(s, "salom"))  // true
+    fmt.Println(strings.HasSuffix(s, "dunyo"))  // true
+    fmt.Println(strings.Index(s, "dunyo"))      // 6
+}
+```
+
+```bash
+$ go run search.go
+true
+true
+true
+6
+```
+
+Qisqasi: bor-yo'qligini bilmoqchi bo'lsangiz `Contains`, o'rnini bilmoqchi bo'lsangiz `Index` (topilmasa `-1` qaytaradi).
+
+Manba / batafsil: [pkg.go.dev/strings#Contains](https://pkg.go.dev/strings#Contains)
+
+## Split va Join
+
+`Split` stringni ajratuvchi (separator) bo'yicha kesib `[]string` qaytaradi; `Join` esa aksini qiladi — bo'laklarni qaytadan bittaga ulaydi.
+
+```go filename="splitjoin.go"
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+func main() {
+    parts := strings.Split("olma,anor,uzum", ",")
+    fmt.Println(parts, len(parts))          // [olma anor uzum] 3
+    fmt.Println(strings.Join(parts, " | "))  // olma | anor | uzum
+}
+```
+
+```bash
+$ go run splitjoin.go
+[olma anor uzum] 3
+olma | anor | uzum
+```
+
+Qisqasi: `Split` va `Join` bir-birining teskarisi — CSV kabi ma'lumotni ochish va qayta yig'ish uchun juda qulay.
+
+Manba / batafsil: [pkg.go.dev/strings#Split](https://pkg.go.dev/strings#Split)
+
+## Almashtirish va registr
+
+`ReplaceAll` mos kelgan hamma qismni almashtiradi; `ToUpper`/`ToLower` esa registrni (katta/kichik harf) o'zgartiradi.
+
+```go filename="replace.go"
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+func main() {
+    fmt.Println(strings.ReplaceAll("gopher gopher", "gopher", "gofer"))
+    fmt.Println(strings.ToUpper("gopher"))
+    fmt.Println(strings.ToLower("GOPHER"))
+}
+```
+
+```bash
+$ go run replace.go
+gofer gofer
+GOPHER
+gopher
+```
+
+Qisqasi: registrga qaramay taqqoslamoqchi bo'lsangiz, avval ikkala tomonni `ToLower` qilib oling.
+
+Manba / batafsil: [pkg.go.dev/strings#ReplaceAll](https://pkg.go.dev/strings#ReplaceAll)
+
+## Tozalash va Fields
+
+`TrimSpace` matnning chetlaridagi bo'sh joy, tab va yangi qatorni olib tashlaydi; `Fields` esa matnni bo'sh joylar bo'yicha bo'ladi va ketma-ket kelgan bo'shliqlarni o'zi hisobga olmaydi.
+
+```go filename="trim.go"
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+func main() {
+    fmt.Printf("%q\n", strings.TrimSpace("   salom\n"))  // "salom"
+    fmt.Println(strings.Fields("  bir    ikki   uch  "))  // [bir ikki uch]
+}
+```
+
+```bash
+$ go run trim.go
+"salom"
+[bir ikki uch]
+```
+
+Qisqasi: foydalanuvchi kiritgan matnni deyarli doim `TrimSpace` bilan tozalab oling.
+
+Manba / batafsil: [pkg.go.dev/strings#Fields](https://pkg.go.dev/strings#Fields)
+
+## strings.Builder
+
+Sikl ichida `+` bilan string ulayverish sekin ishlaydi — har safar yangi xotira ajratiladi (allocation). `strings.Builder` esa hammasini ichki buferga yozadi va oxirida bitta string qaytaradi; u `io.Writer` bo'lgani uchun `fmt.Fprintf` ni ham to'g'ridan-to'g'ri unga ulash mumkin.
+
+```go filename="builder.go"
+package main
+
+import (
+    "fmt"
+    "strings"
+)
+
+func main() {
+    var b strings.Builder
+    for i := range 3 {
+        fmt.Fprintf(&b, "qator-%d\n", i)
+    }
+    fmt.Print(b.String())
+}
+```
+
+```bash
+$ go run builder.go
+qator-0
+qator-1
+qator-2
+```
+
+Qisqasi: ko'p bo'lakdan bitta string yig'ayotgan bo'lsangiz — `Builder` dan foydalaning.
+
+Manba / batafsil: [pkg.go.dev/strings#Builder](https://pkg.go.dev/strings#Builder)
+
+Keyingi qismda matnni sonlarga aylantiruvchi `strconv` ni ko'ramiz.

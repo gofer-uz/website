@@ -1,0 +1,105 @@
+# net/http: Server
+
+Go da HTTP server yozish uchun framework shart emas — standart `net/http` ishlab chiqarishga yaroqli. Go 1.22 dan routing sezilarli yaxshilandi.
+
+## Eng oddiy server
+
+Server ikki narsadan iborat: **handler** (so'rovga javob beruvchi) va **mux** (so'rovni to'g'ri handler'ga yo'naltiruvchi). Handler `http.ResponseWriter` (javob yoziladigan joy) va `*http.Request` (kelgan so'rov) oladi.
+
+```go filename="server.go"
+package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func main() {
+    mux := http.NewServeMux()
+    mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprintln(w, "Salom, gopher!")
+    })
+    fmt.Println("Server :8080 da")
+    http.ListenAndServe(":8080", mux)
+}
+```
+
+```bash
+$ go run server.go &
+$ curl http://localhost:8080/
+Salom, gopher!
+```
+
+Takeaway: `mux` + `HandleFunc` + `ListenAndServe` — eng minimal server.
+
+Manba / batafsil: [pkg.go.dev/net/http#ServeMux](https://pkg.go.dev/net/http#ServeMux)
+
+## Metod va yo'l parametrlari (Go 1.22)
+
+Endi pattern'ga metod yozish mumkin: `"GET /users/{id}"`. Yo'ldagi `{id}` — parametr; uni `r.PathValue("id")` bilan olamiz. Mos metod bo'lmasa mux avtomatik `405` qaytaradi.
+
+```go filename="routing.go"
+package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func main() {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+        fmt.Fprintf(w, "Foydalanuvchi ID: %s\n", r.PathValue("id"))
+    })
+    http.ListenAndServe(":8080", mux)
+}
+```
+
+```bash
+$ go run routing.go &
+$ curl http://localhost:8080/users/42
+Foydalanuvchi ID: 42
+```
+
+Takeaway: `{id}` + `r.PathValue("id")` — tashqi router'siz REST yo'llari.
+
+Manba / batafsil: [go.dev/blog/routing-enhancements](https://go.dev/blog/routing-enhancements)
+
+## Status kod va JSON qaytarish
+
+`w.Header().Set(...)` sarlavha, `w.WriteHeader(...)` status kod o'rnatadi (avval sarlavha, keyin tana). `ResponseWriter` — `io.Writer` bo'lgani uchun `json.NewEncoder(w).Encode(...)` to'g'ridan-to'g'ri javobga JSON yozadi.
+
+```go filename="jsonapi.go"
+package main
+
+import (
+    "encoding/json"
+    "net/http"
+)
+
+type User struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
+
+func main() {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(User{ID: 2, Name: "Vali"})
+    })
+    http.ListenAndServe(":8080", mux)
+}
+```
+
+```bash
+$ go run jsonapi.go &
+$ curl http://localhost:8080/users/2
+{"id":2,"name":"Vali"}
+```
+
+Takeaway: ishlab chiqarishda `*http.Server` bilan `ReadTimeout`/`WriteTimeout` ni sozlang.
+
+Manba / batafsil: [pkg.go.dev/net/http#ResponseWriter](https://pkg.go.dev/net/http#ResponseWriter)
+
+Keyingi qismda HTTP mijozini — so'rov yuborishni ko'ramiz.

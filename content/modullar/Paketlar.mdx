@@ -1,0 +1,65 @@
+# Paketlar
+
+Go da har bir fayl biror paketga tegishli. Paket - bir-biriga bog'liq kodni birlashtiruvchi eng kichik birlik. Modul paketlardan, paket esa fayllardan tashkil topadi.
+
+## Package clause
+
+Har bir `.go` faylining birinchi (izohlardan keyingi) qatori - `package` e'loni. U faylning qaysi paketga tegishli ekanini aytadi. Qat'iy qoida: **bitta papkadagi barcha fayllar bitta paket nomiga ega bo'lishi shart**.
+
+```go filename="matn/matn.go"
+package matn
+
+import "strings"
+
+func Katta(s string) string  { return strings.ToUpper(s) }
+func Kichik(s string) string { return strings.ToLower(s) }
+```
+
+Bir papkada ikki xil paket nomi bo'lsa, kompilyator darrov shikoyat qiladi:
+
+```bash
+$ go build ./matn
+found packages matn (matn.go) and boshqa (kichik.go) in /home/user/loyiha/matn
+```
+
+**Xulosa:** papka = paket; ichidagi hamma fayl bir xil `package` nomini yozadi.
+
+## package main va kutubxona
+
+`package main` - ishga tushuvchi dastur; ichida `main` funksiyasi bo'lishi shart, dastur shundan boshlanadi. `go build` uni bajariluvchi faylga (binary) aylantiradi. Nomi `main` dan boshqa har qanday paket - **kutubxona**: o'zicha ishlamaydi, uni boshqalar import qiladi.
+
+```go filename="main.go"
+package main
+
+import (
+	"fmt"
+
+	"example.com/loyiha/matn"
+)
+
+func main() {
+	fmt.Println(matn.Katta("salom"))
+}
+```
+
+```bash
+$ go run .
+SALOM
+```
+
+**Xulosa:** `main` - dastur, qolgani - import qilinadigan kutubxona.
+
+## Paket izohlari
+
+Yaxshi paket boshida uni tushuntiruvchi izoh turadi - u `package` qatoridan bevosita oldin yoziladi va `go doc` hamda [pkg.go.dev](https://pkg.go.dev) da hujjat sifatida chiqadi:
+
+```go filename="matn/matn.go"
+// Package matn matnlar ustida oddiy amallarni bajaradi.
+package matn
+```
+
+Odat bo'yicha izoh "Package nomi ..." deb boshlanadi. Har bir paketda bitta shunday izoh yetarli.
+
+Manba / batafsil: [Go spetsifikatsiyasi - Packages](https://go.dev/ref/spec#Packages) va [Effective Go - Names](https://go.dev/doc/effective_go#names)
+
+Endi paketning qaysi qismi tashqariga ko'rinishini - **eksport** qoidalarini ko'ramiz.

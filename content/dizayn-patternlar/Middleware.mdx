@@ -1,0 +1,71 @@
+# Middleware
+
+**Muammo:** har bir HTTP so'rovga bir xil ishlarni qo'shmoqchisiz - log, autentifikatsiya, tiklanish (recover) - lekin bu kodni har bir handler ichida takrorlamasdan. Bu Decorator patterni HTTP dunyosidagi ko'rinishi.
+
+**G'oya:** middleware - `func(http.Handler) http.Handler`. U kelgan handler'ni o'rab, o'z ishini bajaradi va keyin ichkaridagini chaqiradi. Bir necha middleware'ni zanjir qilib ulasangiz, so'rov qatlamdan qatlamga o'tadi.
+
+```go filename="middleware.go"
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+)
+
+type Middleware func(http.Handler) http.Handler
+
+func Logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("LOG: %s %s\n", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func Auth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Token") != "secret" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		fmt.Println("AUTH: ruxsat berildi")
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Chain middleware'larni ketma-ket bog'laydi (birinchisi eng tashqarida).
+func Chain(h http.Handler, mws ...Middleware) http.Handler {
+	for i := len(mws) - 1; i >= 0; i-- {
+		h = mws[i](h)
+	}
+	return h
+}
+
+func main() {
+	final := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "salom, foydalanuvchi")
+	})
+
+	handler := Chain(final, Logging, Auth)
+
+	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	req.Header.Set("X-Token", "secret")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	fmt.Printf("status=%d body=%q\n", rec.Code, rec.Body.String())
+}
+```
+
+```bash
+$ go run middleware.go
+LOG: GET /profile
+AUTH: ruxsat berildi
+status=200 body="salom, foydalanuvchi\n"
+```
+
+So'rov avval `Logging`, keyin `Auth`, so'ng handler tartibida o'tdi. Token noto'g'ri bo'lsa, `Auth` zanjirni to'xtatib, handler'ga umuman yetib bormaydi.
+
+**Qachon:** har qanday HTTP xizmatida kesib o'tuvchi vazifalar (cross-cutting) uchun. Go note: bu Go veb-dasturlashning asosiy naqshi; `chi`, `gin` va standart `net/http` shu imzoga tayanadi.
+
+Manba / batafsil: [go.dev - net/http Handler](https://pkg.go.dev/net/http#Handler)

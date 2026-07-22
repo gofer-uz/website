@@ -1,0 +1,116 @@
+# errors.Is va errors.As
+
+O'ralgan xatolikni oddiy `==` bilan tekshirib bo'lmaydi, chunki u bir necha qavat ichida yashiringan. `errors.Is` va `errors.As` o'ram zanjiri bo'ylab yurib chiqib, kerakli xatolikni topadi.
+
+## `errors.Is` - sentinel bilan solishtirish
+
+`errors.Is(err, target)` zanjirning biror qavatida `target` bor-yo'qligini tekshiradi, xatolik o'ralgan bo'lsa ham:
+
+```go filename="errors-is.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrTopilmadi = errors.New("element topilmadi")
+
+func foydalanuvchiOl(id int) error {
+	return fmt.Errorf("foydalanuvchi %d: %w", id, ErrTopilmadi)
+}
+
+func main() {
+	err := foydalanuvchiOl(42)
+	fmt.Println("== bilan:      ", err == ErrTopilmadi)
+	fmt.Println("errors.Is bilan:", errors.Is(err, ErrTopilmadi))
+}
+```
+
+```bash
+$ go run errors-is.go
+== bilan:       false
+errors.Is bilan: true
+```
+
+`==` `false` beradi, chunki `err` o'ralgan xatolik; `errors.Is` esa ichkariga kirib `ErrTopilmadi` ni topadi. Sentinel errorlarni doim `errors.Is` bilan tekshiring.
+
+## `errors.As` - turli xatolikni ajratib olish
+
+Xatolikning qaysi turdan ekanini bilib, ichidagi maydonlariga yetish kerak bo'lsa, `errors.As` ishlatiladi:
+
+```go filename="errors-as.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+type ValidationError struct {
+	Maydon string
+	Xabar  string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Maydon, e.Xabar)
+}
+
+func tekshir() error {
+	asl := &ValidationError{Maydon: "email", Xabar: "noto'g'ri format"}
+	return fmt.Errorf("forma tekshiruvida: %w", asl)
+}
+
+func main() {
+	var vErr *ValidationError
+	if errors.As(tekshir(), &vErr) {
+		fmt.Println("xato maydon:", vErr.Maydon)
+	}
+}
+```
+
+```bash
+$ go run errors-as.go
+xato maydon: email
+```
+
+`errors.As` ga maqsad turidagi o'zgaruvchining pointerini (`&vErr`) beramiz. U zanjirdan `*ValidationError` ni topsa, `vErr` ga joylaydi va `true` qaytaradi - asl xatolik o'ralgan bo'lsa ham. Qisqa qoida: aniq qiymat uchun `errors.Is`, xatolik turi uchun `errors.As`.
+
+## `errors.Join` - bir necha xatolikni birlashtirish
+
+Bir amalda bir nechta xatolik yuz bersa (masalan, formada bir necha maydon xato), `errors.Join` (Go 1.20 dan) ularni bittaga birlashtiradi:
+
+```go filename="errors-join.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var (
+	ErrIsmBosh    = errors.New("ism bo'sh")
+	ErrYoshKichik = errors.New("yosh 18 dan kichik")
+)
+
+func main() {
+	err := errors.Join(ErrIsmBosh, ErrYoshKichik)
+	fmt.Println(err)
+	fmt.Println("ism bo'shmi:", errors.Is(err, ErrIsmBosh))
+}
+```
+
+```bash
+$ go run errors-join.go
+ism bo'sh
+yosh 18 dan kichik
+ism bo'shmi: true
+```
+
+Har bir xatolik alohida qatorda chiqadi va `errors.Is` birlashgan xatolik ustida ham ishlaydi. Agar barcha argumentlar `nil` bo'lsa, `errors.Join` `nil` qaytaradi.
+
+**Takeaway:** Sentinel uchun `errors.Is`, tur uchun `errors.As`, bir nechta xatolikni yig'ish uchun `errors.Join`.
+
+**Manba / batafsil:** [errors.Is / As / Join hujjati](https://pkg.go.dev/errors)
+
+Keyingi mavzuda butunlay boshqa vosita - `defer` ga o'tamiz.

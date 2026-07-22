@@ -1,0 +1,73 @@
+# Strategy
+
+**Muammo:** bitta vazifani bajarishning bir necha usuli bor (turlicha saralash, turlicha to'lov, turlicha siqish) va ularni ish vaqtida almashtira olish kerak. Kodni `if/else` shoxlari bilan to'ldirmaslik lozim.
+
+**G'oya:** har bir usulni alohida "strategiya" qilib ajratasiz va kerakligini uzatasiz. Go da strategiya ko'pincha shunchaki **funksiya qiymati** - alohida interfeys yoki class shart emas.
+
+```go filename="strategy.go"
+package main
+
+import (
+	"fmt"
+	"sort"
+)
+
+type Product struct {
+	Name  string
+	Price int
+}
+
+// Strategy - shunchaki funksiya turi.
+type SortStrategy func(a, b Product) bool
+
+func ByPrice(a, b Product) bool { return a.Price < b.Price }
+func ByName(a, b Product) bool  { return a.Name < b.Name }
+
+type Catalog struct {
+	products []Product
+	sortBy   SortStrategy
+}
+
+func (c *Catalog) SetStrategy(s SortStrategy) { c.sortBy = s }
+
+func (c *Catalog) Sorted() []Product {
+	out := make([]Product, len(c.products))
+	copy(out, c.products)
+	sort.Slice(out, func(i, j int) bool { return c.sortBy(out[i], out[j]) })
+	return out
+}
+
+func main() {
+	c := &Catalog{products: []Product{
+		{"Klaviatura", 350000},
+		{"Sichqoncha", 120000},
+		{"Monitor", 1500000},
+	}}
+
+	c.SetStrategy(ByPrice)
+	fmt.Println("Narx bo'yicha:", names(c.Sorted()))
+
+	c.SetStrategy(ByName)
+	fmt.Println("Nom bo'yicha: ", names(c.Sorted()))
+}
+
+func names(ps []Product) []string {
+	out := make([]string, len(ps))
+	for i, p := range ps {
+		out[i] = p.Name
+	}
+	return out
+}
+```
+
+```bash
+$ go run strategy.go
+Narx bo'yicha: [Sichqoncha Klaviatura Monitor]
+Nom bo'yicha:  [Klaviatura Monitor Sichqoncha]
+```
+
+Xatti-harakatni `SetStrategy` bilan ish vaqtida almashtirdik, `Sorted`ni umuman o'zgartirmadik.
+
+**Qachon:** o'zaro almashinadigan algoritmlar kerak bo'lganda. Go note: funksiya - birinchi darajali qiymat bo'lgani uchun Strategy ko'pincha bitta `func` ga qisqaradi (`sort.Slice`, `http.HandlerFunc` shu g'oyada).
+
+Manba / batafsil: [refactoring.guru/design-patterns/strategy](https://refactoring.guru/design-patterns/strategy/go/example)

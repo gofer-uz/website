@@ -1,0 +1,57 @@
+# State
+
+**Muammo:** obyekt o'z holatiga qarab turlicha ishlaydi va holatlar o'rtasida qat'iy o'tish qoidalari bor (svetofor, buyurtma bosqichlari, ulanish). Buni bitta katta `switch` bilan yozsangiz, kod tez chalkashadi.
+
+**G'oya:** har bir holatni alohida tur qilasiz, u faqat o'ziga tegishli xatti-harakat va keyingi holatga o'tishni biladi. O'tish mantig'i holatlarga taqsimlanadi.
+
+```go filename="state.go"
+package main
+
+import "fmt"
+
+// State - svetofor holati. Har biri keyingisini biladi.
+type State interface {
+	Next() State
+	Name() string
+}
+
+type Red struct{}
+type Green struct{}
+type Yellow struct{}
+
+func (Red) Next() State     { return Green{} }
+func (Red) Name() string    { return "QIZIL" }
+func (Green) Next() State   { return Yellow{} }
+func (Green) Name() string  { return "YASHIL" }
+func (Yellow) Next() State  { return Red{} }
+func (Yellow) Name() string { return "SARIQ" }
+
+type TrafficLight struct {
+	state State
+}
+
+func (t *TrafficLight) Switch() { t.state = t.state.Next() }
+
+func main() {
+	light := &TrafficLight{state: Red{}}
+	for range 5 {
+		fmt.Println("holat:", light.state.Name())
+		light.Switch()
+	}
+}
+```
+
+```bash
+$ go run state.go
+holat: QIZIL
+holat: YASHIL
+holat: SARIQ
+holat: QIZIL
+holat: YASHIL
+```
+
+`TrafficLight` keyingi holatni o'zi hisoblamaydi - har bir holat buni biladi. Yangi holat qo'shish boshqalarini buzmaydi.
+
+**Qachon:** aniq holatlar va o'tishlarga ega tizimlar (state machine) uchun. Go note: oddiy holat mashinasini `type State int` + `switch` bilan ham yozsa bo'ladi; interfeysli variant o'tishlar murakkablashganda foyda beradi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/state](https://refactoring.guru/design-patterns/state/go/example)

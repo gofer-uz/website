@@ -1,0 +1,85 @@
+# WaitGroup
+
+Bir nechta goroutine tugashini `time.Sleep` bilan taxmin qilish yaramaydi. To'g'ri asbob - `sync.WaitGroup`, oddiy hisoblagich:
+
+- `wg.Add(n)` - hisoblagichga `n` qo'shadi (nechta goroutine kutamiz).
+- `wg.Done()` - bittaga kamaytiradi (goroutine "tugadim" deydi).
+- `wg.Wait()` - hisoblagich nolga tushguncha bloklaydi.
+
+```go filename="waitgroup.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func worker(id int, wg *sync.WaitGroup) {
+    defer wg.Done() // funksiya qanday tugasa ham chaqiriladi
+    fmt.Printf("ishchi %d tugatdi\n", id)
+}
+
+func main() {
+    var wg sync.WaitGroup
+
+    for i := 1; i <= 3; i++ {
+        wg.Add(1) // goroutine dan OLDIN
+        go worker(i, &wg)
+    }
+
+    wg.Wait()
+    fmt.Println("barcha ishchilar tugadi")
+}
+```
+
+```bash
+$ go run waitgroup.go
+ishchi 3 tugatdi
+ishchi 1 tugatdi
+ishchi 2 tugatdi
+barcha ishchilar tugadi
+```
+
+Ishchilar tartibi har xil, lekin `barcha ishchilar tugadi` doim oxirida. Uch qoida: `WaitGroup` ni **pointer** (`*sync.WaitGroup`) qilib uzating (nusxa deadlock beradi), `defer wg.Done()` ishlating, `Add` ni goroutine dan **oldin** chaqiring.
+
+## Loop o'zgaruvchisini "ushlab qolish" tuzog'i
+
+Go 1.22 gacha `for` ichida closure loop o'zgaruvchisini ishlatganda barcha goroutine lar **bitta va o'sha** o'zgaruvchini baham ko'rar, ko'pincha oxirgi qiymatni ko'rardi:
+
+```go filename="loopvar.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func main() {
+    var wg sync.WaitGroup
+
+    for i := 1; i <= 3; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            fmt.Println("i =", i)
+        }()
+    }
+
+    wg.Wait()
+}
+```
+
+```bash
+$ go run loopvar.go
+i = 3
+i = 1
+i = 2
+```
+
+**Go 1.22 dan** har iteratsiya `i` ning yangi nusxasini oladi, shuning uchun bu kod endi to'g'ri (`1`, `2`, `3` - tartib aralash). Go 1.21 va eski versiyalarda esa aynan shu kod ko'pincha `i = 3` ni uch marta chop etardi. Eski kodni barcha versiyada to'g'ri yozish uchun qiymatni parametr qilib uzating: `go func(n int){ ... }(i)`.
+
+**Qisqasi:** `Add`/`Done`/`Wait` bilan goroutine larni kuting; Go 1.22 loopvar tuzatuvidan keyin loop o'zgaruvchisi har iteratsiyada yangi.
+
+Manba / batafsil: [pkg.go.dev/sync#WaitGroup](https://pkg.go.dev/sync#WaitGroup), [go.dev/blog/loopvar-preview](https://go.dev/blog/loopvar-preview)
+
+`WaitGroup` goroutine larni kutadi, lekin umumiy o'zgaruvchini himoyalamaydi - buning uchun `sync.Mutex` keyingi darsda.

@@ -1,0 +1,108 @@
+# Rekursiya va Dynamic Programming
+
+Rekursiya - funksiya o'zini chaqirishi. Katta muammoni o'ziga o'xshash kichik muammolarga bo'lib yechish uchun qulay. Lekin sof rekursiya ba'zan bir ishni qayta-qayta bajaradi - mana shu yerda **dynamic programming (DP)** kirib keladi: hisoblangan natijani saqlab qo'yib, keyingi safar qayta hisoblamaysiz.
+
+Bu yo'lni uch bosqichda ko'ramiz: sodda rekursiya → memoization → DP.
+
+## 1. Sodda rekursiya (sekin)
+
+Fibonacci ning naive versiyasi bir xil qiymatni ko'p marta hisoblaydi - `O(2^n)`.
+
+```go filename="fib_slow.go"
+package main
+
+import "fmt"
+
+func fib(n int) int {
+    if n < 2 {
+        return n
+    }
+    return fib(n-1) + fib(n-2)
+}
+
+func main() {
+    fmt.Println(fib(10)) // 55
+}
+```
+
+```bash
+$ go run fib_slow.go
+55
+```
+
+`fib(40)` ni chaqirib ko'ring - sekundlab kutasiz. Chunki `fib(38)` o'nlab marta qayta hisoblanadi.
+
+## 2. Memoization (rekursiya + kesh)
+
+Natijani map da saqlaymiz. Endi har `fib(k)` faqat bir marta hisoblanadi - `O(n)`.
+
+```go filename="fib_memo.go"
+package main
+
+import "fmt"
+
+func fib(n int, memo map[int]int) int {
+    if n < 2 {
+        return n
+    }
+    if v, ok := memo[n]; ok {
+        return v
+    }
+    memo[n] = fib(n-1, memo) + fib(n-2, memo)
+    return memo[n]
+}
+
+func main() {
+    fmt.Println(fib(50, map[int]int{})) // 12586269025
+}
+```
+
+```bash
+$ go run fib_memo.go
+12586269025
+```
+
+## 3. Bottom-up DP (jadval bilan)
+
+Rekursiyasiz, kichikdan kattaga qarab jadval to'ldiramiz. Xotira ham tejaladi.
+
+```go filename="coin.go"
+package main
+
+import "fmt"
+
+// coin change: `amount` ni yig'ish uchun eng kam tanga soni
+func coinChange(coins []int, amount int) int {
+    const inf = 1 << 30
+    dp := make([]int, amount+1)
+    for i := 1; i <= amount; i++ {
+        dp[i] = inf
+        for _, c := range coins {
+            if c <= i && dp[i-c]+1 < dp[i] {
+                dp[i] = dp[i-c] + 1
+            }
+        }
+    }
+    if dp[amount] == inf {
+        return -1
+    }
+    return dp[amount]
+}
+
+func main() {
+    fmt.Println(coinChange([]int{1, 3, 4}, 6)) // 2 (3+3)
+    fmt.Println(coinChange([]int{2}, 3))       // -1
+}
+```
+
+```bash
+$ go run coin.go
+2
+-1
+```
+
+DP ning kaliti: muammoni kichik qism-muammolarga bo'lib, ularning javobini bir marta hisoblab saqlash. `dp[i]` "i uchun javob" degani.
+
+**Xulosa:** Takroriy qism-muammolar bo'lsa - kesh yoki DP jadvali `O(2^n)` ni `O(n)` ga aylantiradi.
+
+**Manba / batafsil:** [Dynamic programming - Wikipedia](https://en.wikipedia.org/wiki/Dynamic_programming)

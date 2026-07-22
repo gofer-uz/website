@@ -1,0 +1,68 @@
+# Interfeyslar
+
+Interfeys (interface) — bu metodlar ro'yxati. U turdan nima qilinishi kerakligini aytadi, qanday qilinishini emas. Go'da implementatsiya **yashirin** bo'ladi: `implements` degan kalit so'z yo'q — tur interfeysdagi metodlarni yozsa bo'lgani, u avtomatik shu interfeysni qondiradi.
+
+```go filename="interface.go"
+package main
+
+import (
+    "fmt"
+    "math"
+)
+
+type Shape interface {
+    Area() float64
+}
+
+type Rectangle struct{ W, H float64 }
+type Circle struct{ R float64 }
+
+func (r Rectangle) Area() float64 { return r.W * r.H }
+func (c Circle) Area() float64    { return math.Pi * c.R * c.R }
+
+func main() {
+    // turli turlarni bitta slice ichida saqlaymiz
+    shapes := []Shape{Rectangle{3, 4}, Circle{5}}
+    for _, s := range shapes {
+        fmt.Printf("Yuza: %.2f\n", s.Area())
+    }
+}
+```
+
+```bash
+$ go run interface.go
+Yuza: 12.00
+Yuza: 78.54
+```
+
+Xulosa: `Rectangle` ham, `Circle` ham hech qayerda "men `Shape`man" deb aytmadi — shunchaki `Area()`ni yozib qo'ydi, tamom, interfeys qondi.
+
+Metodi yo'q interfeys — bu bo'sh interfeys, uni istalgan qiymat qondiradi. Uning qulay taxallusi (alias) — `any`. `fmt` esa maxsus `Stringer` interfeysini taniydi: tur `String() string` yozsa, chop etilganda o'sha o'zi chaqiriladi.
+
+```go filename="stringer-any.go"
+package main
+
+import "fmt"
+
+type Point struct{ X, Y int }
+
+func (p Point) String() string {
+    return fmt.Sprintf("(%d, %d)", p.X, p.Y)
+}
+
+func main() {
+    var v any = Point{3, 7} // any = bo'sh interface
+    fmt.Println(v)          // Stringer.String() chaqiriladi
+    fmt.Printf("tur: %T\n", v)
+}
+```
+
+```bash
+$ go run stringer-any.go
+(3, 7)
+tur: main.Point
+```
+
+Xulosa: `any` istalgan qiymatni qabul qiladi, `String()` esa obyektni chiroyli ko'rinishda chiqarishning standart yo'li (bo'lmaganida `{3 7}` chiqardi).
+
+Manba / batafsil: [Go spec — Interface types](https://go.dev/ref/spec#Interface_types), [fmt.Stringer](https://pkg.go.dev/fmt#Stringer)

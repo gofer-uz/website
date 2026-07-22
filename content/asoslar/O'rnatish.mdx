@@ -1,6 +1,6 @@
 # Go O'rnatish
 
-Go dasturlash tilini kompyuteringizga qanday o'rnatish mumkin.
+Go dasturlash tilini kompyuteringizga qanday o'rnatishni ko'rib chiqamiz.
 
 ## Linux
 
@@ -20,7 +20,7 @@ sudo tar -C /usr/local -xzf go*.linux-amd64.tar.gz
 rm go*.linux-amd64.tar.gz
 ```
 
-`~/.bashrc` yoki `~/.zshrc` fayliga quyidagilarni yozing:
+`~/.bashrc` yoki `~/.zshrc` fayliga quyidagi qatorlarni qo'shing:
 
 ```bash
 export PATH=$PATH:/usr/local/go/bin
@@ -28,7 +28,7 @@ export GOPATH=$HOME/go
 export PATH=$PATH:$GOPATH/bin
 ```
 
-Keyin terminalni yoping va qayta oching, yoki quyidagini bajaring:
+So'ng terminalni yopib qayta oching yoki quyidagini bajaring:
 
 ```bash
 source ~/.bashrc
@@ -71,11 +71,11 @@ brew install go
 
 ### Rasmiy dastur
 
-1. [go.dev/dl](https://go.dev/dl/) dan macOS uchun `.pkg` faylni yuklang
-2. Yuklab olingan faylni oching va ko'rsatmalarga amal qiling
+1. [go.dev/dl](https://go.dev/dl/) dan macOS uchun `.pkg` faylni yuklab oling
+2. Faylni oching va ko'rsatmalarga amal qiling
 3. Go `/usr/local/go` papkasiga o'rnatiladi
 
-Ixtiyoriy, `~/.zshrc` yoki `~/.bash_profile` ga qo'shing:
+Xohlasangiz, `~/.zshrc` yoki `~/.bash_profile` ga quyidagilarni qo'shing:
 
 ```bash
 export PATH=$PATH:/usr/local/go/bin
@@ -87,17 +87,17 @@ export PATH=$PATH:$GOPATH/bin
 
 ### Oddiy o'rnatish
 
-1. [go.dev/dl](https://go.dev/dl/) dan Windows uchun `.msi` faylni yuklang
+1. [go.dev/dl](https://go.dev/dl/) dan Windows uchun `.msi` faylni yuklab oling
 2. Faylni oching va ko'rsatmalarga amal qiling
 3. Odatda `C:\Program Files\Go` ga o'rnatiladi
 
 ## NixOS
 
-NixOS uchun bir necha yo'l bor:
+NixOS'da bir necha xil yo'l bor:
 
 ### 1. Butun tizimga o'rnatish
 
-`/etc/nixos/configuration.nix` fayliga qo'shing:
+`/etc/nixos/configuration.nix` fayliga quyidagini qo'shing:
 
 ```nix
 { config, pkgs, ... }:
@@ -157,7 +157,7 @@ home-manager switch
 
 ### 4. Nix Shell (vaqtinchalik)
 
-Loyihangizda `shell.nix` yarating:
+Loyihangiz ichida `shell.nix` yarating:
 
 ```nix
 { pkgs ? import <nixpkgs> {} }:
@@ -222,7 +222,7 @@ nix develop
 
 ## Tekshirish
 
-Go to'g'ri o'rnatilganini tekshirish:
+Go to'g'ri o'rnatilganini tekshirib ko'ramiz:
 
 ```bash
 go version
@@ -234,7 +234,7 @@ Natija:
 go version go* linux/amd64
 ```
 
-Go sozlamalarini ko'rish:
+Go sozlamalarini ko'rmoqchi bo'lsangiz:
 
 ```bash
 go env
@@ -242,4 +242,4 @@ go env
 
 
 
-Endi dasturlashni boshlashingiz mumkin.
+Tayyor — endi bemalol dasturlashni boshlasangiz bo'ladi.

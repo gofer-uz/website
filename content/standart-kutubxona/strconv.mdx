@@ -1,0 +1,101 @@
+# strconv
+
+`strconv` ("string conversion") — matn bilan sonlar orasidagi ko'prik. Foydalanuvchi kiritgan matn ham, HTTP parametrlari ham, config qiymatlari ham sizga string bo'lib keladi — ko'pincha ularni avval songa aylantirib olishga to'g'ri keladi.
+
+## Atoi va Itoa
+
+`Atoi` stringni `int` ga, `Itoa` esa `int` ni stringga aylantiradi. `Atoi` doim `error` (xatolik) ham qaytaradi — uni albatta tekshiring.
+
+```go filename="atoi.go"
+package main
+
+import (
+    "fmt"
+    "strconv"
+)
+
+func main() {
+    n, err := strconv.Atoi("42")
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    fmt.Println(n + 8)                 // 50
+    fmt.Println("Yil: " + strconv.Itoa(2026))
+}
+```
+
+```bash
+$ go run atoi.go
+50
+Yil: 2026
+```
+
+Qisqasi: `Atoi` bilan `Itoa` — eng ko'p ishlatiladigan juftlik; xatoni e'tiborsiz qoldirmang.
+
+Manba / batafsil: [pkg.go.dev/strconv#Atoi](https://pkg.go.dev/strconv#Atoi)
+
+## ParseInt, ParseFloat, ParseBool
+
+`ParseInt` da sanoq sistemasi (base) va bit kengligini o'zingiz belgilaysiz; `base=0` bo'lsa, sistemani prefiksga qarab (`0x`, `0b`) o'zi aniqlab oladi.
+
+```go filename="parse.go"
+package main
+
+import (
+    "fmt"
+    "strconv"
+)
+
+func main() {
+    h, _ := strconv.ParseInt("ff", 16, 64)
+    fmt.Println(h)                          // 255
+    f, _ := strconv.ParseFloat("3.14159", 64)
+    fmt.Printf("%.2f\n", f)                  // 3.14
+    b, _ := strconv.ParseBool("true")
+    fmt.Println(b)                           // true
+}
+```
+
+```bash
+$ go run parse.go
+255
+3.14
+true
+```
+
+Qisqasi: oddiy `Atoi` dan ko'ra kengroq nazorat kerak bo'lsa (base, bit kengligi) — `ParseInt` ga o'ting.
+
+Manba / batafsil: [pkg.go.dev/strconv#ParseInt](https://pkg.go.dev/strconv#ParseInt)
+
+## FormatInt va Quote
+
+`FormatInt` sonni istalgan sanoq sistemasida stringga aylantiradi (`Parse` ning teskarisi). `Quote` esa stringni Go sintaksisidagi qo'shtirnoqli ko'rinishga keltiradi va `\n`, `\t` kabi belgilarni ko'rinadigan qilib chiqaradi — debug paytida ayni muddao.
+
+```go filename="format.go"
+package main
+
+import (
+    "fmt"
+    "strconv"
+)
+
+func main() {
+    fmt.Println(strconv.FormatInt(255, 16))   // ff
+    fmt.Println(strconv.FormatInt(255, 2))    // 11111111
+    fmt.Println(strconv.Quote("qator\ttab"))   // "qator\ttab"
+}
+```
+
+```bash
+$ go run format.go
+ff
+11111111
+"qator\ttab"
+```
+
+Qisqasi: `%q` verbi ham xuddi `Quote` kabi ishlaydi — mayda ishlarga u qulayroq.
+
+Manba / batafsil: [pkg.go.dev/strconv#FormatInt](https://pkg.go.dev/strconv#FormatInt)
+
+Keyingi qismda vaqt bilan ishlash — `time` paketiga o'tamiz.

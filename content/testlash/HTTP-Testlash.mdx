@@ -1,0 +1,116 @@
+# HTTP testlash
+
+HTTP handler'ni testlash uchun haqiqiy port ochib, server ko'tarish shart emas. `net/http/httptest` paketi buni ancha osonlashtiradi. Ikkita asosiy vosita bor: server tomonini sinash uchun `httptest.NewRecorder` va HTTP klientni (client) sinash uchun `httptest.NewServer`.
+
+## Handler'ni testlash: NewRecorder + ServeHTTP
+
+`httptest.NewRecorder()` javobni yozib oladigan soxta `ResponseWriter` qaytaradi. Handler'ni to'g'ridan-to'g'ri chaqirib, natijasini tekshiramiz — bunda tarmoq umuman ishtirok etmaydi:
+
+```go filename="handler.go"
+package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+func GreetHandler(w http.ResponseWriter, r *http.Request) {
+    name := r.URL.Query().Get("name")
+    if name == "" {
+        name = "mehmon"
+    }
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintf(w, "Salom, %s!", name)
+}
+```
+
+```go filename="handler_test.go"
+package main
+
+import (
+    "io"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestGreetHandler(t *testing.T) {
+    req := httptest.NewRequest(http.MethodGet, "/?name=Ali", nil)
+    rec := httptest.NewRecorder() // javobni yozib oladi
+
+    GreetHandler(rec, req) // handler'ni to'g'ridan-to'g'ri chaqiramiz
+
+    res := rec.Result()
+    if res.StatusCode != http.StatusOK {
+        t.Fatalf("status = %d; kutilgan 200", res.StatusCode)
+    }
+    body, _ := io.ReadAll(res.Body)
+    if string(body) != "Salom, Ali!" {
+        t.Errorf("body = %q; kutilgan %q", body, "Salom, Ali!")
+    }
+}
+```
+
+```bash
+$ go test -v -run TestGreetHandler
+=== RUN   TestGreetHandler
+--- PASS: TestGreetHandler (0.00s)
+PASS
+ok      example/httpsrv 0.004s
+```
+
+**Xulosa:** handler = `NewRecorder` + handler'ni bevosita chaqirish, keyin `rec.Result()` orqali status va body'ni tekshirasiz.
+
+## Klientni testlash: NewServer
+
+Endi buning aksini ko'ramiz — sizning kodingiz tashqi HTTP servisga so'rov yuboradigan holat. `httptest.NewServer` haqiqiy, lekin vaqtinchalik va lokal server ko'taradi hamda uning URL'ini beradi. Kodingizni o'sha URL'ga yo'naltirib sinab ko'rasiz:
+
+```go filename="client_test.go"
+package main
+
+import (
+    "io"
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestFetch(t *testing.T) {
+    // Soxta server — istagan javobni qaytaradi.
+    srv := httptest.NewServer(http.HandlerFunc(
+        func(w http.ResponseWriter, r *http.Request) {
+            fmt.Fprint(w, "pong")
+        }))
+    defer srv.Close()
+
+    // Klient kodimiz srv.URL ga so'rov yuboradi.
+    resp, err := http.Get(srv.URL)
+    if err != nil {
+        t.Fatalf("so'rov xatosi: %v", err)
+    }
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    if string(body) != "pong" {
+        t.Errorf("body = %q; kutilgan pong", body)
+    }
+}
+```
+
+Bu misolda `fmt` importi ham kerak bo'ladi (`fmt.Fprint` uchun) — test faylidagi importlar ro'yxatiga `"fmt"` ni qo'shib qo'ying.
+
+```bash
+$ go test -v -run TestFetch
+=== RUN   TestFetch
+--- PASS: TestFetch (0.00s)
+PASS
+ok      example/httpsrv 0.006s
+```
+
+`srv.URL` — bu real, ishlaydigan lokal manzil; test tugagach `defer srv.Close()` uni yopadi.
+
+**Xulosa:** klient kodini sinash uchun `httptest.NewServer` bilan soxta server ko'taring va kodingizni `srv.URL` ga yo'naltiring.
+
+Manba / batafsil: [pkg.go.dev/net/http/httptest](https://pkg.go.dev/net/http/httptest)
+
+Shu bilan testlash bo'limi yakunlandi: endi `testing` asoslari, table-driven testlar, benchmark, fuzzing, coverage va HTTP testlash — hammasi qo'lingizda.

@@ -1,0 +1,57 @@
+# Goroutinelar
+
+Goroutine — Go runtime boshqaradigan yengil oqim (thread). OS thread'laridan ancha arzon: bittasi bor-yo'g'i bir necha kilobayt joy oladi, shuning uchun minglab goroutine bemalol yonma-yon ishlab turaveradi. Funksiyani goroutine sifatida ishga tushirish uchun oldiga `go` qo'yamiz:
+
+```go
+go doSomething()
+```
+
+Shu bitta so'z bilan `doSomething` alohida goroutine'da ketadi, `main` esa uni kutmay davom etaveradi.
+
+```go filename="goroutine.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func say(s string) {
+    for i := range 3 {
+        fmt.Println(s, i)
+    }
+}
+
+func main() {
+    go say("async") // alohida goroutine da
+    say("main")     // main goroutine da
+
+    time.Sleep(100 * time.Millisecond)
+}
+```
+
+```bash
+$ go run goroutine.go
+main 0
+async 0
+main 1
+async 1
+main 2
+async 2
+```
+
+Chiqish tartibi har safar ishga tushirganda o'zgarishi mumkin — ikki goroutine bir-biridan mustaqil ishlaydi.
+
+## Main goroutine hammasidan muhim
+
+`main` ning o'zi ham bir goroutine. **Main tugasa, butun dastur to'xtaydi** — qolganlar tugadimi-yo'qmi, ahamiyati yo'q. Yuqoridagi `time.Sleep` aynan shuning uchun kerak edi: usiz `main` goroutine'ni ishga tushirishga ham ulgurmay yopilib qolardi. Ammo `Sleep` bilan "kutish" — taxminga tayanish, ya'ni yaramas usul. To'g'ri yechim — goroutine chindan tugaganini kutadigan `sync.WaitGroup` (alohida darsda ko'ramiz).
+
+## Concurrency va parallelism
+
+**Concurrency** — ishlarni bir vaqtda *boshqarish* (dastur tuzilishi): vazifalar bir-birini kutmay navbatma-navbat siljiydi. Bu bitta yadroda ham bo'laveradi. **Parallelism** — ishlarni bir vaqtda *bajarish* (apparat): ikki yadro ikki goroutine'ni jismonan yonma-yon ishlatadi. Siz concurrent kod (goroutine + channel) yozasiz, uni yadrolarga taqsimlab parallel ishlatishni esa runtime o'zi hal qiladi.
+
+**Qisqasi:** `go` funksiyani yangi goroutine'da ishga tushiradi; main tugasa hammasi to'xtaydi, shuning uchun goroutine'larni kutib olish shart.
+
+Manba / batafsil: [go.dev/tour/concurrency](https://go.dev/tour/concurrency/1), [Effective Go — Goroutines](https://go.dev/doc/effective_go#goroutines)
+
+Goroutine'lar o'zaro channel orqali gaplashadi — keyingi darsda.

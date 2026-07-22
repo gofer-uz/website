@@ -1,0 +1,103 @@
+# Generic turlar
+
+Type parameter'lar faqat funksiyalar uchun emas — butun `struct` ni ham generic qilsa bo'ladi. Bu ma'lumot tuzilmalari (data structures) uchun juda qulay: bir marta yozgan `Stack`'ingiz istalgan element turi bilan ishlaydi. Sintaksis funksiyanikiga o'xshaydi — type parameter tur nomidan keyin keladi.
+
+## Generic Stack
+
+```go filename="stack.go"
+package main
+
+import "fmt"
+
+// Stack[T] — T turidagi elementlar stack'i.
+type Stack[T any] struct {
+    items []T
+}
+
+// Receiver'da T ni qayta e'lon qilamiz: (s *Stack[T]).
+func (s *Stack[T]) Push(item T) {
+    s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+    var zero T // T ning nol qiymati — qaysi tur bo'lsa ham ishlaydi
+    if len(s.items) == 0 {
+        return zero, false
+    }
+    last := s.items[len(s.items)-1]
+    s.items = s.items[:len(s.items)-1]
+    return last, true
+}
+
+func main() {
+    nums := &Stack[int]{} // instantiation: Stack[int]
+    nums.Push(10)
+    nums.Push(20)
+    v, ok := nums.Pop()
+    fmt.Println(v, ok)
+
+    words := &Stack[string]{} // xuddi shu Stack, endi string bilan
+    words.Push("salom")
+    fmt.Println(words.Pop())
+}
+```
+
+```bash
+$ go run stack.go
+20 true
+salom true
+```
+
+`Stack[int]` va `Stack[string]` — bir-biriga bog'liq bo'lmagan alohida turlar; buni **instantiation** deymiz. `nums` ga `string` push qilib bo'lmaydi — kompilyator to'xtatadi.
+
+**Xulosa:** generic tur `type Stack[T any] struct{...}` ko'rinishida e'lon qilinadi, receiver'da `T` qayta yoziladi.
+
+## Muhim cheklov: metodlar type parameter qabul qila olmaydi
+
+Bu eng ko'p uchraydigan tuzoq. **Metod o'zining yangi type parameter'ini e'lon qila olmaydi** — masalan `func (s *Stack[T]) Map[U any](...)` kompilyatsiya bo'lmaydi. Metod faqat o'z turi bergan `T` ni ishlata oladi. Yechim: yangi `U` kerak bo'lsa, metod emas, **oddiy funksiya** yozing:
+
+```go filename="mapstack.go"
+package main
+
+import (
+    "fmt"
+    "strconv"
+)
+
+type Stack[T any] struct {
+    items []T
+}
+
+func (s *Stack[T]) Push(item T) {
+    s.items = append(s.items, item)
+}
+
+// Funksiya, metod emas — shuning uchun ham T, ham U ni e'lon qila oladi.
+func MapStack[T, U any](s *Stack[T], f func(T) U) *Stack[U] {
+    out := &Stack[U]{}
+    for _, v := range s.items {
+        out.Push(f(v))
+    }
+    return out
+}
+
+func main() {
+    nums := &Stack[int]{}
+    nums.Push(1)
+    nums.Push(2)
+
+    strs := MapStack(nums, func(n int) string { return strconv.Itoa(n * 10) })
+    fmt.Println(strs.items)
+}
+```
+
+```bash
+$ go run mapstack.go
+[10 20]
+```
+
+**Xulosa:** mavjud `T` bilan ishlash — metod; yangi tur kerak bo'lsa — funksiya.
+
+Manba / batafsil: [go.dev/blog/intro-generics](https://go.dev/blog/intro-generics)
+
+Amaliy maslahat: generics'ni faqat rostdan kerak bo'lganda ishlating — ko'p holatda oddiy interfeys yoki aniq tur o'qishga osonroq.

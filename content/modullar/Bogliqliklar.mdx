@@ -1,0 +1,80 @@
+# Bog'liqliklarni Boshqarish
+
+Ertami-kechmi tashqi paketga - UUID generatoriga, HTTP router ga - ehtiyoj tug'iladi. Go da bunday **bog'liqliklarni** boshqarish bir nechta oddiy buyruqdan iborat.
+
+## go get - qo'shish
+
+Yangi paketni `go get` bilan qo'shasiz; u paketni yuklab olib, `go.mod` va `go.sum` ni yangilaydi:
+
+```bash
+$ go get github.com/google/uuid
+go: downloading github.com/google/uuid v1.6.0
+go: added github.com/google/uuid v1.6.0
+```
+
+```go filename="main.go"
+package main
+
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
+
+func main() {
+	fmt.Println(uuid.New())
+}
+```
+
+```bash
+$ go run .
+9b2e4f7a-3c1d-4e8b-a6f0-1d2c3b4a5e6f
+```
+
+**Xulosa:** `go get <paket>` bog'liqlik qo'shadi va `go.mod` ga yozadi.
+
+## go mod tidy - tartibga solish
+
+`go mod tidy` `go.mod` ni haqiqiy kodga moslaydi: ishlatilayotgan paketlarni qoldiradi, ortiqchasini o'chiradi, yetishmayotganini qo'shadi:
+
+```bash
+$ go mod tidy
+go: finding module for package github.com/google/uuid
+go: added github.com/google/uuid v1.6.0
+```
+
+**Xulosa:** commit dan oldin `go mod tidy` - `go.mod` doim toza qoladi.
+
+## Yangilash va olib tashlash
+
+Versiyani `@` bilan tanlaysiz; `-u` esa mavjudlarini yangilaydi (major versiyaga o'zi sakramaydi):
+
+```bash
+$ go get github.com/google/uuid@v1.5.0   # aniq versiya
+$ go get -u ./...                         # hammasini yangilash (minor/patch)
+```
+
+Paketni olib tashlashning alohida buyrug'i kerak emas: uni kod importlaridan o'chiring, so'ng `go mod tidy` - u ishlatilmagan paketni o'zi olib tashlaydi.
+
+**Xulosa:** kod haqiqatni belgilaydi, `go.mod` unga ergashadi.
+
+## GOPROXY
+
+Go paketlarni to'g'ridan-to'g'ri emas, **modul proksi** orqali oladi (keshlab turadi, tez va ishonchli):
+
+```bash
+$ go env GOPROXY
+https://proxy.golang.org,direct
+```
+
+`direct` - "proksida topilmasa, manbadan ol" degani. Xususiy repozitoriylar uchun `GOPRIVATE` ni sozlab, ularni proksidan chetlab o'tkazasiz:
+
+```bash
+$ go env -w GOPRIVATE=github.com/mening-kompaniyam/*
+```
+
+**Xulosa:** ochiq paketlar proksi orqali, xususiylar `GOPRIVATE` orqali to'g'ridan-to'g'ri keladi.
+
+Manba / batafsil: [Bog'liqliklarni boshqarish](https://go.dev/doc/modules/managing-dependencies) va [go.dev/ref/mod - go get](https://go.dev/ref/mod#go-get)
+
+Endi bu versiyalar aslida qanday ishlashini - **semantik versiyalashni** ko'ramiz.

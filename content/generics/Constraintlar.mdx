@@ -1,0 +1,85 @@
+# Constraintlar
+
+`any` bilan `T` ustida hech qanday amal qila olmaymiz — "istalgan tur" `+` ni ham, `==` ni ham qo'llab-quvvatlamasligi mumkin. Constraint `T` qaysi turlardan biri bo'lishini va shu bilan unda qanday amallar joizligini belgilaydi. Sintaktik jihatdan u — `interface`, lekin oddiy interfeysdan farqi: metodlardan tashqari **turlar to'plamini** ham sanay oladi.
+
+## comparable va tayyor constraintlar
+
+Tayyor keladigan eng muhimi — `comparable` (`==`, `!=` bilan solishtirsa bo'ladigan turlar) va `cmp.Ordered` (`<`, `>` bilan tartiblanadigan turlar: sonlar va `string`). Ko'p holatda o'zingiznikini yozmasdan shularni ishlatasiz:
+
+```go filename="ordered.go"
+package main
+
+import (
+    "cmp"
+    "fmt"
+)
+
+// cmp.Ordered — <, > amallarini qo'llab-quvvatlaydi.
+func Max[T cmp.Ordered](a, b T) T {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+func main() {
+    fmt.Println(Max(3, 9))
+    fmt.Println(Max("olma", "banan"))
+}
+```
+
+```bash
+$ go run ordered.go
+9
+olma
+```
+
+`cmp.Ordered` o'rniga `any` yozsak, `a > b` kompilyatsiya bo'lmasdi.
+
+**Xulosa:** shunchaki solishtirish uchun `comparable` yoki `cmp.Ordered` — standart, hech narsa o'rnatmaysiz.
+
+## O'z constraint'ingiz: union va ~ operatori
+
+Arifmetika (`+`, `-`) kerak bo'lsa, o'z constraint'ingizni yozasiz — interfeys ichida turlarni `|` (union) bilan sanaysiz. `~int` esa "asosiy turi (underlying type) `int` bo'lgan har qanday tur" degani, shuning uchun `type Yosh int` kabi foydalanuvchi turlari ham mos keladi:
+
+```go filename="number.go"
+package main
+
+import "fmt"
+
+// ~int | ~float64 — asosiy turi shu bo'lgan barcha turlar.
+type Number interface {
+    ~int | ~float64
+}
+
+type Yosh int // asosiy turi int
+
+func Sum[T Number](nums []T) T {
+    var total T // nol qiymat: int uchun 0, float64 uchun 0.0
+    for _, n := range nums {
+        total += n
+    }
+    return total
+}
+
+func main() {
+    fmt.Println(Sum([]int{1, 2, 3, 4}))
+    fmt.Println(Sum([]Yosh{18, 25, 30})) // ~int bo'lgani uchun mos
+}
+```
+
+```bash
+$ go run number.go
+10
+73
+```
+
+`~` bo'lmaganida `Sum([]Yosh{...})` kompilyatsiya bo'lmasdi. Qoida: constraint yozganda deyarli har doim `~` ishlating.
+
+Agar tayyor arifmetik constraintlar kerak bo'lsa, `golang.org/x/exp/constraints` paketida `constraints.Integer`, `constraints.Float` va boshqalar bor (standart kutubxona emas, `go get golang.org/x/exp/constraints` bilan o'rnatiladi).
+
+**Xulosa:** arifmetika kerak bo'lsa `~int | ~float64` kabi union constraint yozing yoki `x/exp/constraints` dan foydalaning.
+
+Manba / batafsil: [pkg.go.dev/cmp#Ordered](https://pkg.go.dev/cmp#Ordered), [pkg.go.dev/golang.org/x/exp/constraints](https://pkg.go.dev/golang.org/x/exp/constraints)
+
+Keyingi bo'limda [generic turlar](/generics/Generic-Turlar) — masalan generic `Stack` — yasashni ko'ramiz.

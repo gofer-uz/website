@@ -1,0 +1,53 @@
+# Testlash — kirish
+
+Go'da test yozish uchun alohida freymvork (framework) shart emas — kerakli hamma narsa standart `testing` paketi (package) va `go test` buyrug'ida bor. Qoida juda oddiy: test kodini nomi `_test.go` bilan tugaydigan faylga yozasiz (`math.go` uchun `math_test.go`), bu fayllar esa odatdagi build'ga tushmaydi.
+
+Test funksiyasidan ikki narsa talab qilinadi: nomi `Test` bilan boshlanib, keyingi harfi katta bo'lsin (`TestAdd`) va u `t *testing.T` argumentini olsin. Go'da `assert` degani yo'q — natijani oddiy `if` bilan solishtirasiz, mos kelmasa `t.Errorf` yoki `t.Fatalf` chaqirasiz.
+
+```go filename="math.go"
+package main
+
+func Add(a, b int) int {
+    return a + b
+}
+```
+
+```go filename="math_test.go"
+package main
+
+import "testing"
+
+func TestAdd(t *testing.T) {
+    got := Add(2, 3)
+    want := 5
+    if got != want {
+        // Errorf: xatoni qayd qiladi, lekin test davom etadi.
+        // Fatalf: qayd qiladi va shu yerda testni to'xtatadi.
+        t.Errorf("Add(2, 3) = %d; kutilgan %d", got, want)
+    }
+}
+```
+
+```bash
+$ go test -v
+=== RUN   TestAdd
+--- PASS: TestAdd (0.00s)
+PASS
+ok      example/mathpkg 0.002s
+```
+
+`-v` (verbose) har bir testni alohida chiqaradi. Faqat bitta testni ishga tushirmoqchi bo'lsangiz, `-run` bayrog'i regulyar ifoda (regular expression) qabul qiladi:
+
+```bash
+$ go test -run TestAdd
+PASS
+ok      example/mathpkg 0.002s
+```
+
+`Errorf` bilan `Fatalf` orasidagi farq muhim: keyingi tekshiruvlarni davom ettirsa bo'ladigan bo'lsa — `Errorf`; bu yerdan nariga borishning ma'nosi qolmagan yoki xavfli bo'lsa (masalan, `nil` ni ishlatib panic chiqadi) — `Fatalf`, u testni o'sha zahoti to'xtatadi.
+
+**Xulosa:** `_test.go` fayl, `func TestXxx(t *testing.T)`, `if` + `t.Errorf`/`t.Fatalf`, `go test -run` bilan bittasini ishga tushirasiz.
+
+Manba / batafsil: [pkg.go.dev/testing](https://pkg.go.dev/testing)
+
+Keyingi bo'limda Go'da eng ko'p ishlatiladigan uslub — [table-driven testlar](/testlash/Table-Driven) bilan tanishamiz.

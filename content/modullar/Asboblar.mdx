@@ -1,0 +1,77 @@
+# go Asboblari
+
+`go` buyrug'i - Go ning shveytsariya pichog'i. Bitta binary ichida kompilyator, formatlagich, tekshiruvchi va hujjat o'quvchi bor. Kunda eng ko'p ishlatiladiganlarini ko'rib chiqamiz. Barchasini `go help` da ko'rasiz.
+
+## go run va go build
+
+`go run` kodni kompilyatsiya qilib darrov ishga tushiradi (fayl qoldirmaydi) - tez sinash uchun qulay. `go build` esa bajariluvchi fayl hosil qiladi:
+
+```bash
+$ go run .
+salom
+$ go build -o salom .
+$ ./salom
+salom
+```
+
+**Xulosa:** `go run` - sinash uchun, `go build` - tayyor binary uchun.
+
+## go install
+
+`go install` binary ni qurib, uni `$GOPATH/bin` (yoki `$GOBIN`) ga joylaydi - shunda uni har joydan nomi bilan chaqirasiz. Boshqa birovning asbobini o'rnatish uchun ham ishlaydi:
+
+```bash
+$ go install golang.org/x/tools/cmd/goimports@latest
+$ goimports -h
+```
+
+**Xulosa:** `go install` binary ni `PATH` ga tushadigan joyga o'rnatadi.
+
+## go fmt va go vet
+
+`gofmt` kodni yagona rasmiy uslubga keltiradi - Go da uslub bahsi yo'q. `go fmt ./...` butun loyihani formatlaydi. `go vet` esa kompilyatsiyadan o'tsa ham shubhali kodni topadi (masalan noto'g'ri `Printf` argumenti):
+
+```bash
+$ go vet ./...
+# example.com/loyiha
+./main.go:8:2: fmt.Printf format %d has arg s of wrong type string
+```
+
+**Xulosa:** `gofmt` uslubni, `go vet` mantiqiy shubhalarni tekshiradi.
+
+## go doc
+
+`go doc` hujjatni to'g'ridan-to'g'ri terminalda ko'rsatadi - brauzer shart emas:
+
+```bash
+$ go doc strings.ToUpper
+package strings // import "strings"
+
+func ToUpper(s string) string
+    ToUpper returns s with all Unicode letters mapped to their upper case.
+```
+
+**Xulosa:** `go doc paket.Nom` - istalgan paketning hujjati qo'l ostingizda.
+
+## Build bayroqlari va cross-compilation
+
+`go build` ba'zi foydali bayroqlarni oladi: `-o` chiqish nomini, `-ldflags` esa linker sozlamalarini beradi (masalan versiyani binaryga yozish):
+
+```bash
+$ go build -ldflags="-X main.version=1.0.0" -o salom .
+```
+
+Eng kuchli tomoni - **cross-compilation**. `GOOS` (operatsion tizim) va `GOARCH` (arxitektura) ni belgilab, boshqa platforma uchun binary quriladi - hech qanday qo'shimcha asbob kerak emas:
+
+```bash
+$ GOOS=windows GOARCH=amd64 go build -o salom.exe .
+$ GOOS=linux GOARCH=arm64 go build -o salom-arm .
+```
+
+Mavjud platformalar ro'yxatini `go tool dist list` da ko'rasiz.
+
+**Xulosa:** `GOOS`/`GOARCH` bilan bir mashinadan barcha platformalarga binary quriladi.
+
+Manba / batafsil: [go buyrug'i ma'lumotnomasi](https://pkg.go.dev/cmd/go) va [go.dev/doc/tutorial/compile-install](https://go.dev/doc/tutorial/compile-install)
+
+Shu bilan modullar va paketlar bo'limini yakunladik - endi loyihalaringizni ishonch bilan tuzishga tayyorsiz.

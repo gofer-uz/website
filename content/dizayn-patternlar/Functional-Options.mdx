@@ -1,0 +1,60 @@
+# Functional Options
+
+**Muammo:** obyektni sozlashda ko'p ixtiyoriy parametr bor. Konstruktorga hammasini qo'shsangiz, `NewServer("localhost", 8080, 30, true, false, ...)` kabi o'qib bo'lmaydigan chaqiruv chiqadi. Yangi parametr qo'shsangiz, eski chaqiruvlar buziladi.
+
+**G'oya:** har bir sozlama - `Server`ni o'zgartiruvchi funksiya (`func(*Server)`). Konstruktor ularni variadik qabul qiladi va ketma-ket qo'llaydi. Bu Go'ning eng sevimli konfiguratsiya usuli - `grpc`, `zap` va boshqa mashhur kutubxonalar shundan foydalanadi.
+
+```go filename="options.go"
+package main
+
+import (
+	"fmt"
+	"time"
+)
+
+type Server struct {
+	host    string
+	port    int
+	timeout time.Duration
+	tls     bool
+}
+
+// Option - Server ni sozlaydigan funksiya.
+type Option func(*Server)
+
+func WithHost(host string) Option        { return func(s *Server) { s.host = host } }
+func WithPort(port int) Option           { return func(s *Server) { s.port = port } }
+func WithTimeout(d time.Duration) Option { return func(s *Server) { s.timeout = d } }
+func WithTLS() Option                    { return func(s *Server) { s.tls = true } }
+
+func NewServer(opts ...Option) *Server {
+	s := &Server{host: "localhost", port: 8080, timeout: 30 * time.Second} // standart
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+func (s *Server) String() string {
+	return fmt.Sprintf("host=%s port=%d timeout=%s tls=%t", s.host, s.port, s.timeout, s.tls)
+}
+
+func main() {
+	fmt.Println("s1:", NewServer()) // faqat standart qiymatlar
+
+	s2 := NewServer(WithHost("gopher.uz"), WithPort(443), WithTLS())
+	fmt.Println("s2:", s2)
+}
+```
+
+```bash
+$ go run options.go
+s1: host=localhost port=8080 timeout=30s tls=false
+s2: host=gopher.uz port=443 timeout=30s tls=true
+```
+
+Faqat kerakli qismini yozasiz, qolgani standart bo'lib qoladi. Yangi `Option` qo'shish eski kodni buzmaydi.
+
+**Qachon:** ko'p ixtiyoriy sozlamali konstruktorlar uchun - Go da bu Builder'dan ham idiomatikroq. Go note: bu tilning "sof funksiyalar + variadik argument" imkoniyatidan tug'ilgan, alohIda struct ham talab qilmaydi.
+
+Manba / batafsil: [Dave Cheney - Functional options](https://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis)

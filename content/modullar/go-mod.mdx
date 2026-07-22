@@ -1,0 +1,61 @@
+# Modullar va go.mod
+
+Har bir jiddiy Go loyihasi `go.mod` faylidan boshlanadi. Bu fayl loyihangizni **module** ga aylantiradi: uning nomini, Go versiyasini va bog'liqliklarini bir joyda saqlaydi. `GOPATH` davri ortda qoldi - bugun modullar standart.
+
+## Modul yaratish
+
+Papka ochib, ichida `go mod init` ni argument sifatida modul yo'li bilan ishga tushiring:
+
+```bash
+$ go mod init example.com/salom
+go: creating new go.mod: module example.com/salom
+```
+
+Natijada `go.mod` paydo bo'ladi:
+
+```go filename="go.mod"
+module example.com/salom
+
+go 1.22
+```
+
+Modul yo'li - bu boshqalar sizning paketingizni `import` qiladigan manzil, odatda `github.com/foydalanuvchi/loyiha` ko'rinishida.
+
+**Xulosa:** `go mod init <yo'l>` bo'sh papkani modulga aylantiradi.
+
+## go.mod anatomiyasi
+
+Loyiha o'sgani sari `go.mod` to'ladi. Uchta asosiy direktiva:
+
+```go filename="go.mod"
+module github.com/gofer-uz/blog
+
+go 1.22
+
+require (
+	github.com/google/uuid v1.6.0
+	golang.org/x/text v0.14.0
+)
+```
+
+- **`module`** - modul yo'li; barcha ichki paketlarning import yo'li shundan boshlanadi.
+- **`go`** - kod qaysi Go versiyasiga mo'ljallangani; til imkoniyatlarini ochadi.
+- **`require`** - tashqi modullar va ularning aniq versiyalari. Buni qo'lda emas, `go get` / `go mod tidy` yozadi.
+
+## go.sum va import yo'llari
+
+`require` da paket paydo bo'lishi bilan `go.sum` ham tug'iladi - u har bir bog'liqlikning kriptografik xeshini saqlaydi. Go har yuklashda xeshni solishtiradi; fayl buzilsa yoki almashtirilsa, xatolik beradi. `go.mod` va `go.sum` ni doim `git` ga qo'shing.
+
+Import yo'li modul yo'li va papka nomidan iborat:
+
+```go
+import "github.com/gofer-uz/blog/store" // modul yo'li + "store" papkasi
+```
+
+To'liq yo'l noyob bo'lgani uchun ikki xil kutubxona bir xil oxirgi nomga ega bo'lsa ham to'qnashmaydi.
+
+**Xulosa:** `go.mod` modulni ta'riflaydi, `go.sum` uni xavfsiz qiladi, import yo'li esa modul yo'li ustiga quriladi.
+
+Manba / batafsil: [go.dev/ref/mod](https://go.dev/ref/mod) va [go.mod fayl ma'lumotnomasi](https://go.dev/doc/modules/gomod-ref)
+
+Endi modul ichidagi eng kichik birlik - **paket** bilan tanishamiz.

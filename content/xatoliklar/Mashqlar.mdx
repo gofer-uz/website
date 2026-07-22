@@ -1,0 +1,270 @@
+# Mashqlar
+
+Bu bo'lim xatoliklar bilan ishlashni - `error` qiymatlari, o'z xatolik turlari, o'rash (`%w`), `errors.Is`/`errors.As`, `defer` va `panic`/`recover` ni - mustahkamlash uchun. Har bir masalani avval o'zingiz yozing va ishga tushirib ko'ring, keyingina yechimni oching.
+
+## 1. Xatolik qaytarish
+
+`bolish(a, b int) (int, error)` funksiyasini yozing. `b == 0` bo'lsa `errors.New` bilan `"nolga bo'lish mumkin emas"` xatoligini qaytarsin, aks holda bo'linma va `nil`. `main` da ikkala holatni ham tekshiring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+)
+
+func bolish(a, b int) (int, error) {
+    if b == 0 {
+        return 0, errors.New("nolga bo'lish mumkin emas")
+    }
+    return a / b, nil
+}
+
+func main() {
+    if _, err := bolish(10, 0); err != nil {
+        fmt.Println("xatolik:", err)
+    }
+    if n, err := bolish(10, 2); err == nil {
+        fmt.Println("natija:", n)
+    }
+}
+```
+
+Natija:
+
+```bash
+xatolik: nolga bo'lish mumkin emas
+natija: 5
+```
+
+</details>
+
+## 2. O'z xatolik turingiz
+
+`NotFoundError` degan `struct` yasang, unda `Key string` maydoni bo'lsin, va unga `Error() string` metodini qo'shing - u `"topilmadi: <Key>"` matnini qaytarsin. Bu turni `error` sifatida qaytaring va chop eting.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+type NotFoundError struct {
+    Key string
+}
+
+func (e *NotFoundError) Error() string {
+    return fmt.Sprintf("topilmadi: %s", e.Key)
+}
+
+func qidir(key string) error {
+    return &NotFoundError{Key: key}
+}
+
+func main() {
+    err := qidir("user_42")
+    fmt.Println(err)
+}
+```
+
+Natija:
+
+```bash
+topilmadi: user_42
+```
+
+</details>
+
+## 3. Sentinel xatolikni `%w` bilan o'rash
+
+`ErrTopilmadi` degan sentinel error e'lon qiling. `foydalanuvchiOl(id int)` funksiyasi uni `fmt.Errorf` va `%w` bilan o'rab, kontekst (foydalanuvchi id) qo'shib qaytarsin. `main` da to'liq xabarni va `errors.Unwrap` orqali asl xatolikni chop eting.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+)
+
+var ErrTopilmadi = errors.New("element topilmadi")
+
+func foydalanuvchiOl(id int) error {
+    return fmt.Errorf("foydalanuvchi %d ni olishda: %w", id, ErrTopilmadi)
+}
+
+func main() {
+    err := foydalanuvchiOl(42)
+    fmt.Println(err)
+    fmt.Println("asl:", errors.Unwrap(err))
+}
+```
+
+Natija:
+
+```bash
+foydalanuvchi 42 ni olishda: element topilmadi
+asl: element topilmadi
+```
+
+</details>
+
+## 4. `errors.Is` bilan tekshirish
+
+3-mashqdagi o'ralgan xatolikni oling. Uni bir marta `==` bilan, bir marta `errors.Is` bilan `ErrTopilmadi` ga solishtiring va ikkalasining natijasini chop eting. Nega farq qilishini tushunib oling.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+)
+
+var ErrTopilmadi = errors.New("element topilmadi")
+
+func foydalanuvchiOl(id int) error {
+    return fmt.Errorf("foydalanuvchi %d: %w", id, ErrTopilmadi)
+}
+
+func main() {
+    err := foydalanuvchiOl(42)
+    fmt.Println("==:       ", err == ErrTopilmadi)
+    fmt.Println("errors.Is:", errors.Is(err, ErrTopilmadi))
+}
+```
+
+Natija:
+
+```bash
+==:        false
+errors.Is: true
+```
+
+</details>
+
+## 5. `errors.As` bilan turni ajratib olish
+
+2-mashqdagi `NotFoundError` ni `fmt.Errorf("...: %w", ...)` bilan o'rab qaytaring. `main` da `errors.As` yordamida o'ram ichidan `*NotFoundError` ni ajratib oling va uning `Key` maydonini chop eting.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import (
+    "errors"
+    "fmt"
+)
+
+type NotFoundError struct {
+    Key string
+}
+
+func (e *NotFoundError) Error() string {
+    return fmt.Sprintf("topilmadi: %s", e.Key)
+}
+
+func qidir() error {
+    asl := &NotFoundError{Key: "user_42"}
+    return fmt.Errorf("bazada qidirishda: %w", asl)
+}
+
+func main() {
+    var nf *NotFoundError
+    if errors.As(qidir(), &nf) {
+        fmt.Println("yo'q kalit:", nf.Key)
+    }
+}
+```
+
+Natija:
+
+```bash
+yo'q kalit: user_42
+```
+
+</details>
+
+## 6. `defer` ning LIFO tartibi
+
+`main` ichida uchta `defer fmt.Println(...)` yozing - `1`, `2`, `3` sonlarini. Ular qaysi tartibda chop etilishini oldindan ayting, keyin ishga tushirib tekshiring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    defer fmt.Println(1)
+    defer fmt.Println(2)
+    defer fmt.Println(3)
+    fmt.Println("main tanasi")
+}
+```
+
+`defer` LIFO (oxirgisi birinchi) tartibida ishlaydi, shuning uchun `3, 2, 1` chiqadi:
+
+```bash
+main tanasi
+3
+2
+1
+```
+
+</details>
+
+## 7. `panic` ni `error` ga aylantirish
+
+`xavfsizBolish(a, b int) (natija int, err error)` funksiyasini yozing. U `a / b` ni hisoblasin, lekin `b == 0` bo'lganda hosil bo'ladigan panic'ni `defer` + `recover` bilan ushlab, uni oddiy `error` ga aylantirib qaytarsin. Dastur crash bo'lmasligi kerak.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go
+package main
+
+import "fmt"
+
+func xavfsizBolish(a, b int) (natija int, err error) {
+    defer func() {
+        if r := recover(); r != nil {
+            err = fmt.Errorf("hisoblashda panic: %v", r)
+        }
+    }()
+
+    natija = a / b // b == 0 bo'lsa panic
+    return natija, nil
+}
+
+func main() {
+    n, err := xavfsizBolish(10, 0)
+    fmt.Println("natija:", n, "| err:", err)
+}
+```
+
+Natija:
+
+```bash
+natija: 0 | err: hisoblashda panic: runtime error: integer divide by zero
+```
+
+</details>
+
+Shu bilan xatoliklar bo'limi mashqlari tugadi. Endi Go da xatoliklarni qiymat sifatida tekshirishdan tortib `panic`/`recover` gacha - hammasini amalda sinab ko'rdingiz.

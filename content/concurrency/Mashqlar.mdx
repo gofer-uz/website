@@ -1,0 +1,333 @@
+# Mashqlar
+
+Bu bo'limda concurrency asboblarini amalda sinab ko'rasiz: goroutine, channel, `select`, `WaitGroup`, `Mutex`, worker pool, pipeline va `context`. Har bir mashqni avval o'zingiz yechishga urinib ko'ring, kodni yozib ishga tushiring, keyingina yechimni oching. Barcha yechimlar deadlock'siz va (aytilgan joyda) barqaror natija beradi.
+
+## 1. Goroutine natijalarini yig'ish
+
+Beshta goroutine ishga tushiring; har biri `i` indeksdagi elementga `i*i` ni yozsin. `main` hammasini kutib, slice'ni chop etsin. Har goroutine **alohida** indeksga yozgani uchun mutex kerak emas. Kutilgan chiqish: `[0 1 4 9 16]`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="squares.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func main() {
+    results := make([]int, 5)
+    var wg sync.WaitGroup
+
+    for i := range 5 {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            results[i] = i * i // har goroutine faqat o'z indeksiga yozadi
+        }()
+    }
+
+    wg.Wait()
+    fmt.Println(results)
+}
+```
+
+```bash
+$ go run squares.go
+[0 1 4 9 16]
+```
+
+Go 1.22 dan `i` har iteratsiyada yangi, shuning uchun closure to'g'ri qiymatni ushlaydi. Alohida indekslarga yozish race emas, shuning uchun natija doim `[0 1 4 9 16]`.
+
+</details>
+
+## 2. Channel orqali yig'indi
+
+`producer` funksiyasi `1` dan `5` gacha sonlarni channel ga yuborib, so'ng uni `close` qilsin. `main` esa `for range` bilan o'qib yig'indini hisoblasin. Kutilgan chiqish: `15`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="sum.go"
+package main
+
+import "fmt"
+
+func producer(out chan<- int) {
+    for i := 1; i <= 5; i++ {
+        out <- i
+    }
+    close(out) // yozib bo'lgach yopamiz — range shu tufayli tugaydi
+}
+
+func main() {
+    ch := make(chan int)
+    go producer(ch)
+
+    sum := 0
+    for n := range ch { // channel yopilguncha o'qiydi
+        sum += n
+    }
+    fmt.Println(sum)
+}
+```
+
+```bash
+$ go run sum.go
+15
+```
+
+Agar `close(out)` unutilsa, `range` yangi qiymatni abadiy kutib `fatal error: all goroutines are asleep - deadlock!` beradi.
+
+</details>
+
+## 3. `select` bilan timeout
+
+Bir goroutine `200ms` dan keyin natija yuborsin. `main` esa `select` bilan natijani kutsin, lekin `100ms` timeout qo'ysin. Ish sekin bo'lgani uchun timeout otilishi kerak. Kutilgan chiqish: `timeout: javob kelmadi`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="timeout.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    result := make(chan string)
+
+    go func() {
+        time.Sleep(200 * time.Millisecond) // sekin ish
+        result <- "natija tayyor"
+    }()
+
+    select {
+    case res := <-result:
+        fmt.Println(res)
+    case <-time.After(100 * time.Millisecond):
+        fmt.Println("timeout: javob kelmadi")
+    }
+}
+```
+
+```bash
+$ go run timeout.go
+timeout: javob kelmadi
+```
+
+`time.After` `100ms` da qiymat yuboradi, ish esa `200ms` kerak qildi — shuning uchun timeout case tanlanadi. Timeout `ish`ni to'xtatmaydi, faqat kutishni bas qiladi.
+
+</details>
+
+## 4. Race'ni Mutex bilan tuzatish
+
+Mingta goroutine bitta hisoblagichni birga oshirsin. Mutex'siz natija `1000` dan kam chiqadi (race). `sync.Mutex` bilan uni to'g'rilang. Kutilgan chiqish: `1000`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="counter.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func main() {
+    counter := 0
+    var mu sync.Mutex
+    var wg sync.WaitGroup
+
+    for range 1000 {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            mu.Lock()
+            counter++ // qulf ichida — bo'linmas
+            mu.Unlock()
+        }()
+    }
+
+    wg.Wait()
+    fmt.Println(counter)
+}
+```
+
+```bash
+$ go run counter.go
+1000
+```
+
+`counter++` aslida uch qadam (o'qi, oshir, yoz); `Lock`/`Unlock` uni bir vaqtda faqat bitta goroutine bajarishini kafolatlaydi. Race borligini `go run -race counter.go` ko'rsatadi.
+
+</details>
+
+## 5. Worker pool bilan kvadratlar yig'indisi
+
+Uchta ishchi goroutine `1` dan `10` gacha vazifalarni `jobs` channel'dan olib, har birining kvadratini `results` channel'ga yozsin. `main` natijalarni yig'sin. Vazifalar tartibi aralash bo'lsa ham yig'indi barqaror. Kutilgan chiqish: `385`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="pool.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func worker(jobs <-chan int, results chan<- int, wg *sync.WaitGroup) {
+    defer wg.Done()
+    for j := range jobs { // jobs yopilguncha vazifa oladi
+        results <- j * j
+    }
+}
+
+func main() {
+    jobs := make(chan int, 10)
+    results := make(chan int, 10)
+    var wg sync.WaitGroup
+
+    for range 3 { // 3 ta ishchi
+        wg.Add(1)
+        go worker(jobs, results, &wg)
+    }
+
+    for j := 1; j <= 10; j++ {
+        jobs <- j
+    }
+    close(jobs) // yozib bo'lgach yopamiz
+
+    go func() {
+        wg.Wait()
+        close(results) // hamma ishchi tugagach yopamiz
+    }()
+
+    sum := 0
+    for r := range results {
+        sum += r
+    }
+    fmt.Println(sum)
+}
+```
+
+```bash
+$ go run pool.go
+385
+```
+
+`1²+2²+...+10² = 385`. `jobs` ni yozib bo'lgach `close` qilamiz — ishchilardagi `range` tabiiy tugaydi; `results` ni esa `wg.Wait()` dan keyin alohida goroutine'da yopamiz, aks holda `main` bloklanib deadlock bo'lardi.
+
+</details>
+
+## 6. Ikki bosqichli pipeline
+
+`gen` sonlarni chiqarsin, `square` ularni kvadratlasin — ikkalasi channel bilan ulangan alohida goroutine. `main` natijani chop etsin. Bitta zanjir tartibni saqlagani uchun chiqish barqaror. Kirish `1,2,3,4,5` uchun kutilgan chiqish: `1 4 9 16 25` (har biri alohida qatorda).
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="pipeline.go"
+package main
+
+import "fmt"
+
+func gen(nums ...int) <-chan int {
+    out := make(chan int)
+    go func() {
+        for _, n := range nums {
+            out <- n
+        }
+        close(out)
+    }()
+    return out
+}
+
+func square(in <-chan int) <-chan int {
+    out := make(chan int)
+    go func() {
+        for n := range in {
+            out <- n * n
+        }
+        close(out) // kirish yopilgach chiqishni ham yopamiz
+    }()
+    return out
+}
+
+func main() {
+    for n := range square(gen(1, 2, 3, 4, 5)) {
+        fmt.Println(n)
+    }
+}
+```
+
+```bash
+$ go run pipeline.go
+1
+4
+9
+16
+25
+```
+
+Har bosqich o'z channel'ini yozib bo'lgach `close` qiladi — shunda keyingi bosqichning `range` i to'xtaydi. Bitta ketma-ket zanjir bo'lgani uchun tartib buzilmaydi.
+
+</details>
+
+## 7. `context` bilan goroutine'ni to'xtatish
+
+Cheksiz ishlaydigan goroutine `ctx.Done()` ni kuzatsin. `main` `WithTimeout` (`150ms`) bilan context yaratib, timeout tugagach goroutine o'zi to'xtasin va sababni chop etsin. Kutilgan yakuniy qator: `to'xtadi: context deadline exceeded`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="ctx.go"
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+)
+
+func worker(ctx context.Context, done chan<- struct{}) {
+    for {
+        select {
+        case <-ctx.Done(): // bekor qilindi yoki muddat tugadi
+            fmt.Println("to'xtadi:", ctx.Err())
+            done <- struct{}{}
+            return
+        default:
+            time.Sleep(30 * time.Millisecond) // biror ish
+        }
+    }
+}
+
+func main() {
+    ctx, cancel := context.WithTimeout(context.Background(), 150*time.Millisecond)
+    defer cancel() // resurs oqmasligi uchun har doim chaqiramiz
+
+    done := make(chan struct{})
+    go worker(ctx, done)
+
+    <-done // goroutine to'xtaganini kutamiz
+    fmt.Println("main tugadi")
+}
+```
+
+```bash
+$ go run ctx.go
+to'xtadi: context deadline exceeded
+main tugadi
+```
+
+`150ms` dan keyin context o'zini bekor qiladi, `ctx.Done()` yopiladi va goroutine `select` orqali darhol chiqadi. `done` channel `main` goroutine haqiqatan tugaganini kutishini kafolatlaydi, shuning uchun tartib barqaror.
+
+</details>

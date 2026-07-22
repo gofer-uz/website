@@ -1,0 +1,168 @@
+# Repository Pattern
+
+Servis va handler kodini SQL bilan aralashtirib yozsangiz, ertaga bazani almashtirish yoki test yozish og'ir bo'ladi. **Repository pattern** buni hal qiladi: ma'lumotga kirishni bitta **interfeys** ortiga yashirasiz. Qolgan kod faqat interfeysni biladi, uning ortida PostgreSQL yoki MongoDB turgani — ahamiyatsiz.
+
+## Interfeys — shartnoma
+
+Avval model va interfeysni belgilaymiz. Interfeys "nima qilinadi" ni aytadi, "qanday" ni emas.
+
+```go filename="repository.go"
+package user
+
+import "context"
+
+// User — domendagi foydalanuvchi modeli.
+type User struct {
+    ID           string
+    Email        string
+    PasswordHash string
+}
+
+// UserRepository foydalanuvchi ma'lumotiga kirish shartnomasi.
+// Uni PostgreSQL ham, MongoDB ham, xotiradagi fake ham amalga oshira oladi.
+type UserRepository interface {
+    Create(ctx context.Context, u *User) error
+    ByEmail(ctx context.Context, email string) (*User, error)
+    ByID(ctx context.Context, id string) (*User, error)
+}
+```
+
+## PostgreSQL implementatsiyasi
+
+Endi shu interfeysni `pgx` bilan amalga oshiramiz. E'tibor bering: bu tur `UserRepository` ni qanoatlantiradi, lekin servis kodi uni to'g'ridan-to'g'ri emas, interfeys orqali ko'radi.
+
+```go filename="postgres.go"
+package user
+
+import (
+    "context"
+    "errors"
+
+    "github.com/jackc/pgx/v5"
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+type postgresRepository struct {
+    pool *pgxpool.Pool
+}
+
+// NewPostgresRepository UserRepository ni pgx ustida quradi.
+func NewPostgresRepository(pool *pgxpool.Pool) UserRepository {
+    return &postgresRepository{pool: pool}
+}
+
+func (r *postgresRepository) Create(ctx context.Context, u *User) error {
+    return r.pool.QueryRow(ctx,
+        `INSERT INTO users (email, password_hash)
+         VALUES ($1, $2) RETURNING id`,
+        u.Email, u.PasswordHash).Scan(&u.ID)
+}
+
+func (r *postgresRepository) ByEmail(ctx context.Context, email string) (*User, error) {
+    var u User
+    err := r.pool.QueryRow(ctx,
+        `SELECT id, email, password_hash FROM users WHERE email = $1`, email).
+        Scan(&u.ID, &u.Email, &u.PasswordHash)
+    if errors.Is(err, pgx.ErrNoRows) {
+        return nil, nil // topilmadi — bu xato emas
+    }
+    if err != nil {
+        return nil, err
+    }
+    return &u, nil
+}
+
+func (r *postgresRepository) ByID(ctx context.Context, id string) (*User, error) {
+    var u User
+    err := r.pool.QueryRow(ctx,
+        `SELECT id, email, password_hash FROM users WHERE id = $1`, id).
+        Scan(&u.ID, &u.Email, &u.PasswordHash)
+    if errors.Is(err, pgx.ErrNoRows) {
+        return nil, nil
+    }
+    if err != nil {
+        return nil, err
+    }
+    return &u, nil
+}
+```
+
+## Nega bu kengaytiriladigan — ishlaydigan isbot
+
+Interfeysning kuchi shundaki, uni **DB'siz** ham amalga oshirsa bo'ladi. Quyidagi to'liq dastur bitta xotiradagi (in-memory) implementatsiyani ishlatadi — servis kodi hech narsa bilmagan holda aynan bir xil ishlaydi. Xuddi shu tarzda ertaga `mongoRepository` yozsangiz, servis o'zgarmaydi.
+
+```go filename="main.go"
+package main
+
+import (
+    "context"
+    "errors"
+    "fmt"
+)
+
+type User struct {
+    ID, Email, PasswordHash string
+}
+
+type UserRepository interface {
+    Create(ctx context.Context, u *User) error
+    ByEmail(ctx context.Context, email string) (*User, error)
+}
+
+// memRepo — DB o'rniga xotirada saqlaydigan implementatsiya.
+type memRepo struct {
+    byEmail map[string]*User
+    nextID  int
+}
+
+func newMemRepo() *memRepo { return &memRepo{byEmail: map[string]*User{}} }
+
+func (r *memRepo) Create(ctx context.Context, u *User) error {
+    if _, ok := r.byEmail[u.Email]; ok {
+        return errors.New("email band")
+    }
+    r.nextID++
+    u.ID = fmt.Sprintf("u%d", r.nextID)
+    r.byEmail[u.Email] = u
+    return nil
+}
+
+func (r *memRepo) ByEmail(ctx context.Context, email string) (*User, error) {
+    return r.byEmail[email], nil // topilmasa nil
+}
+
+// register faqat interfeysga bog'liq — postgres bo'ladimi, mem bo'ladimi, farqi yo'q.
+func register(ctx context.Context, repo UserRepository, email string) (*User, error) {
+    u := &User{Email: email, PasswordHash: "hashed"}
+    if err := repo.Create(ctx, u); err != nil {
+        return nil, err
+    }
+    return u, nil
+}
+
+func main() {
+    ctx := context.Background()
+    var repo UserRepository = newMemRepo() // ertaga: NewPostgresRepository(pool)
+
+    u, err := register(ctx, repo, "aziz@example.uz")
+    if err != nil {
+        panic(err)
+    }
+    fmt.Printf("ro'yxatdan o'tdi: %s (%s)\n", u.Email, u.ID)
+
+    found, _ := repo.ByEmail(ctx, "aziz@example.uz")
+    fmt.Println("topildi:", found.ID)
+}
+```
+
+```bash
+$ go run main.go
+ro'yxatdan o'tdi: aziz@example.uz (u1)
+topildi: u1
+```
+
+`register` funksiyasi `postgresRepository` bilan ham, `memRepo` bilan ham o'zgarishsiz ishladi. Bazani almashtirish — yangi tur yozib, `main` dagi bitta qatorni almashtirish. Bu — repository patternning butun ma'nosi.
+
+Manba / batafsil: [go.dev/doc/effective_go#interfaces](https://go.dev/doc/effective_go#interfaces)
+
+Endi hammasini bitta haqiqiy loyihada birlashtiramiz — [Amaliy Loyiha](/malumotlar-bazasi/postgresql/Amaliy-Loyiha).
