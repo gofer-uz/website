@@ -1,0 +1,99 @@
+# Ulanish
+
+Web-server har soniyada o'nlab so'rov qabul qiladi, har biri uchun yangidan TCP ulanish ochish esa qimmatga tushadi. Yechim — **connection pool** (ulanishlar havzasi): oldindan ochib qo'yilgan ulanishlar to'plami. Dastur kerakli paytda havzadan bittasini oladi, ishi tugagach yana qaytarib beradi. `pgx`'da buni `pgxpool` bajaradi.
+
+## Havza ochish va `Ping`
+
+```go filename="connect.go"
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "os"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func main() {
+    ctx := context.Background()
+
+    connString := os.Getenv("DATABASE_URL")
+    if connString == "" {
+        log.Fatal("DATABASE_URL o'rnatilmagan")
+    }
+
+    pool, err := pgxpool.New(ctx, connString)
+    if err != nil {
+        log.Fatalf("havza yaratib bo'lmadi: %v", err)
+    }
+    defer pool.Close()
+
+    if err := pool.Ping(ctx); err != nil {
+        log.Fatalf("bazaga ulanib bo'lmadi: %v", err)
+    }
+    fmt.Println("bazaga muvaffaqiyatli ulandik")
+}
+```
+
+```bash
+$ export DATABASE_URL="postgres://gopher:secret@localhost:5432/shop"
+$ go run connect.go
+bazaga muvaffaqiyatli ulandik
+```
+
+Bu yerda ikkita muhim nuqta bor. Birinchisi: connection string'ni kodning ichiga yozib qo'ymang — uni `DATABASE_URL` muhit o'zgaruvchisidan (environment variable) o'qing, shunda parol Git'ga tushib ketmaydi. Ikkinchisi: `pgxpool.New` xatosiz qaytgani hali "ulandik" degani emas — birinchi haqiqiy ulanish birinchi so'rov paytida ochiladi, shuning uchun `Ping` bilan alohida tekshiring.
+
+## Havzani sozlash
+
+Production'da havza hajmini o'zingiz nazorat qilasiz: `ParseConfig` bilan konfiguratsiyani olasiz, kerakli maydonlarni o'zgartirasiz va `NewWithConfig` bilan ochasiz.
+
+```go filename="config.go"
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "os"
+    "time"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func main() {
+    ctx := context.Background()
+
+    cfg, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+    if err != nil {
+        log.Fatalf("connection string xato: %v", err)
+    }
+    cfg.MaxConns = 10                  // eng ko'pi 10 ta ulanish
+    cfg.MinConns = 2                   // doim kamida 2 tasi tayyor
+    cfg.MaxConnLifetime = time.Hour    // har ulanish 1 soatda yangilanadi
+
+    pool, err := pgxpool.NewWithConfig(ctx, cfg)
+    if err != nil {
+        log.Fatalf("havza yaratib bo'lmadi: %v", err)
+    }
+    defer pool.Close()
+
+    fmt.Printf("maksimal ulanishlar: %d\n", pool.Stat().MaxConns())
+}
+```
+
+```bash
+$ go run config.go
+maksimal ulanishlar: 10
+```
+
+`MaxConns`'ni bazangiz ko'tara oladigan ulanishlar sonidan oshirib yubormang.
+
+## Havzani yopish va uzatish
+
+Havzani `main`'da bir marta oching, `defer pool.Close()` qo'ying va uni butun dastur bo'ylab (repository, servislarga) uzating. Har bir so'rov uchun havzani ochib-yopish xato bo'lardi — pool'ning butun mohiyati shunda: u uzoq yashaydi va qayta-qayta ishlatiladi.
+
+Manba / batafsil: [pkg.go.dev/github.com/jackc/pgx/v5/pgxpool](https://pkg.go.dev/github.com/jackc/pgx/v5/pgxpool)
+
+Havza tayyor — endi ma'lumot yozish va o'qishga o'tamiz: [CRUD](/malumotlar-bazasi/postgresql/CRUD).

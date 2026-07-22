@@ -1,0 +1,65 @@
+# Struct Teglari
+
+Struct tegi (tag) — maydonga biriktirib qo'yiladigan, matn ko'rinishidagi metama'lumot; teskari qo'shtirnoq (backtick) ichida yoziladi. Go'ning o'zi bu teglarni ishlatmaydi — ular boshqa paketlar uchun ko'rsatma, xolos. Eng ko'p uchraydigan joyi — `encoding/json`: teg JSON kalitini belgilaydi (`omitempty` bo'sh maydonni tashlab ketadi, `-` esa maydonni butunlay chiqarib tashlaydi).
+
+```go filename="json-tags.go"
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+)
+
+type Account struct {
+    Username string `json:"username"`
+    Bio      string `json:"bio,omitempty"`
+    Password string `json:"-"`
+}
+
+func main() {
+    a := Account{Username: "gopher", Bio: "", Password: "maxfiy123"}
+    data, _ := json.Marshal(a)
+    fmt.Println(string(data))
+}
+```
+
+```bash
+$ go run json-tags.go
+{"username":"gopher"}
+```
+
+Xulosa: teg tufayli kalit `username` bo'lib chiqdi, `Bio` bo'sh edi — `omitempty` uni tashlab yubordi, `Password` esa `-` tufayli hech qachon ko'rinmaydi.
+
+Teglar oddiy matn, shuning uchun ularni `reflect` orqali o'zingiz ham o'qiy olasiz — `encoding/json` ham xuddi shunday qiladi:
+
+```go filename="reflect-tags.go"
+package main
+
+import (
+    "fmt"
+    "reflect"
+)
+
+type Product struct {
+    Name  string `json:"name" validate:"required"`
+    Price int    `json:"price" validate:"min=0"`
+}
+
+func main() {
+    t := reflect.TypeOf(Product{})
+    for i := 0; i < t.NumField(); i++ {
+        f := t.Field(i)
+        fmt.Printf("%s -> json=%q, validate=%q\n", f.Name, f.Tag.Get("json"), f.Tag.Get("validate"))
+    }
+}
+```
+
+```bash
+$ go run reflect-tags.go
+Name -> json="name", validate="required"
+Price -> json="price", validate="min=0"
+```
+
+Xulosa: `Tag.Get("kalit")` bilan istalgan tegni o'qiy olasiz — validatsiya, ORM (Object-Relational Mapping) va JSON kutubxonalarining hammasi shu mexanizm ustiga qurilgan.
+
+Manba / batafsil: [encoding/json.Marshal](https://pkg.go.dev/encoding/json#Marshal), [reflect.StructTag](https://pkg.go.dev/reflect#StructTag)

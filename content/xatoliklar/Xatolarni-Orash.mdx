@@ -1,0 +1,74 @@
+# Xatolarni o'rash
+
+Katta dasturda xatolik bir necha qatlamdan o'tib yuqoriga ko'tariladi. Har bir qatlam uni shunchaki yuqoriga uzataversa, oxirida "connection refused" degan quruq xabar qoladi — qayerda yuz berganini esa umuman bilmaysiz. Yechimi — o'rash (wrapping): har bir qatlam xatolikka o'z kontekstini qo'shadi, lekin asl xatolikni ichida saqlab qoladi.
+
+## `%w` bilan o'rash
+
+`fmt.Errorf`da maxsus `%w` (wrap) belgisi bor. U `%v`ga o'xshaydi, lekin asl xatolikni yangi xatolikning ichiga bog'lab qo'yadi — shunda uni keyin qayta ochib olsa bo'ladi:
+
+```go filename="wrap.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrTopilmadi = errors.New("element topilmadi")
+
+func foydalanuvchiOl(id int) error {
+	// baza qatlamida ErrTopilmadi qaytdi deb faraz qilamiz
+	return fmt.Errorf("foydalanuvchi %d ni olishda xatolik: %w", id, ErrTopilmadi)
+}
+
+func main() {
+	err := foydalanuvchiOl(42)
+	fmt.Println(err)
+	fmt.Println("asl xatolik:", errors.Unwrap(err))
+}
+```
+
+```bash
+$ go run wrap.go
+foydalanuvchi 42 ni olishda xatolik: element topilmadi
+asl xatolik: element topilmadi
+```
+
+Xabarda ikkala qatlam ham ko'rinib turibdi: yuqori qatlam kontekst qo'shdi, asl `ErrTopilmadi` esa ichida saqlanib qoldi. `errors.Unwrap` bilan o'ramni bir qavat ochib olsa bo'ladi (amalda buni qo'lda kam ishlatasiz - odatda `errors.Is`/`errors.As` avtomatik yuradi).
+
+## `%w` va `%v` orasidagi farq
+
+Tashqi matni bir xil, lekin farq ichida: `%w` bilan o'ralgan xatolikni keyin topib olsa bo'ladi, `%v` bilan esa bog'lanish uziladi.
+
+```go filename="w-vs-v.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrRuxsatYoq = errors.New("ruxsat yo'q")
+
+func main() {
+	wOralgan := fmt.Errorf("amalda: %w", ErrRuxsatYoq)
+	vOralgan := fmt.Errorf("amalda: %v", ErrRuxsatYoq)
+
+	fmt.Println("errors.Is (w):", errors.Is(wOralgan, ErrRuxsatYoq))
+	fmt.Println("errors.Is (v):", errors.Is(vOralgan, ErrRuxsatYoq))
+}
+```
+
+```bash
+$ go run w-vs-v.go
+errors.Is (w): true
+errors.Is (v): false
+```
+
+Asl xatolikni saqlab qolish kerak bo'lsa `%w`, uni ichki detal sifatida yashirmoqchi bo'lsangiz `%v` ishlating. Xatolikka faqat foydali kontekst (ID, fayl, amal) qo'shsangizgina o'rang - takrorlash foyda bermaydi.
+
+**Takeaway:** Asl xatolikni saqlab kontekst qo'shish uchun `fmt.Errorf("...: %w", err)` ishlating.
+
+**Manba / batafsil:** [fmt.Errorf hujjati](https://pkg.go.dev/fmt#Errorf), [Working with Errors in Go 1.13](https://go.dev/blog/go1.13-errors)
+
+Endi o'ralgan xatoliklarni tekshirish - `errors.Is` va `errors.As` ni ko'ramiz.

@@ -1,0 +1,153 @@
+# slices va maps
+
+Go 1.21 dan boshlab standart kutubxonaga `slices` va `maps` paketlari qo'shildi. Ilgari qo'lda yozib yurgan saralash, qidirish, nusxalash kabi amallar endi tayyor generic funksiyalar. Qo'lda `for` sikllari yozishga hojat qolmadi.
+
+## slices.Sort va slices.Contains
+
+`slices.Sort` slice'ni joyida (in place) tartiblaydi; `slices.Contains` element bor-yo'qligini aytadi. Ikkalasi ham istalgan taqqoslanuvchi tur bilan ishlaydi.
+
+```go filename="sort.go"
+package main
+
+import (
+    "fmt"
+    "slices"
+)
+
+func main() {
+    nums := []int{5, 2, 8, 1, 9}
+    slices.Sort(nums)
+    fmt.Println(nums)                       // [1 2 5 8 9]
+    fmt.Println(slices.Contains(nums, 8))    // true
+    fmt.Println(slices.Contains(nums, 100))  // false
+}
+```
+
+```bash
+$ go run sort.go
+[1 2 5 8 9]
+true
+false
+```
+
+Takeaway: `slices.Sort` slice'ning o'zini o'zgartiradi — nusxa qaytarmaydi.
+
+Manba / batafsil: [pkg.go.dev/slices#Sort](https://pkg.go.dev/slices#Sort)
+
+## Index, Max, Min
+
+`slices.Index` elementning birinchi o'rnini (topilmasa `-1`) beradi; `slices.Max`/`slices.Min` esa eng katta/kichik elementni.
+
+```go filename="index.go"
+package main
+
+import (
+    "fmt"
+    "slices"
+)
+
+func main() {
+    s := []string{"olma", "anor", "uzum"}
+    fmt.Println(slices.Index(s, "anor"))  // 1
+    fmt.Println(slices.Index(s, "shaftoli")) // -1
+
+    nums := []int{3, 7, 1, 9, 4}
+    fmt.Println(slices.Max(nums), slices.Min(nums)) // 9 1
+}
+```
+
+```bash
+$ go run index.go
+1
+-1
+9 1
+```
+
+Takeaway: `Max`/`Min` bo'sh slice'da panika beradi — avval uzunligini tekshiring.
+
+Manba / batafsil: [pkg.go.dev/slices#Index](https://pkg.go.dev/slices#Index)
+
+## maps.Keys va maps.Values
+
+`maps.Keys` va `maps.Values` iterator (`iter.Seq`) qaytaradi. Slice qilib olish uchun `slices.Collect`, saralab olish uchun `slices.Sorted` ishlatiladi. Bu map'ni tartibli aylanishning eng toza yo'li — chunki map'da tartib kafolatlanmagan.
+
+```go filename="mapkeys.go"
+package main
+
+import (
+    "fmt"
+    "maps"
+    "slices"
+)
+
+func main() {
+    m := map[string]int{"olma": 3, "anor": 5, "uzum": 2}
+
+    keys := slices.Sorted(maps.Keys(m))
+    fmt.Println(keys)  // [anor olma uzum]
+
+    for _, k := range keys {
+        fmt.Printf("%s = %d\n", k, m[k])
+    }
+}
+```
+
+```bash
+$ go run mapkeys.go
+[anor olma uzum]
+anor = 5
+olma = 3
+uzum = 2
+```
+
+Takeaway: map bo'yicha aylanish tartibi tasodifiy; barqaror chiqish kerak bo'lsa `slices.Sorted(maps.Keys(m))`.
+
+Manba / batafsil: [pkg.go.dev/maps#Keys](https://pkg.go.dev/maps#Keys)
+
+## Struct bo'yicha saralash — slices.SortFunc
+
+Murakkab qiymatlarni maxsus qoida bilan saralash uchun `slices.SortFunc` ishlatiladi: taqqoslash funksiyasi manfiy, nol yoki musbat qaytaradi. `cmp.Compare` bu ishni osonlashtiradi.
+
+```go filename="sortfunc.go"
+package main
+
+import (
+    "cmp"
+    "fmt"
+    "slices"
+)
+
+type Person struct {
+    Name string
+    Age  int
+}
+
+func main() {
+    people := []Person{
+        {"Ali", 30},
+        {"Vali", 25},
+        {"Guli", 28},
+    }
+
+    slices.SortFunc(people, func(a, b Person) int {
+        return cmp.Compare(a.Age, b.Age)
+    })
+
+    for _, p := range people {
+        fmt.Printf("%s: %d\n", p.Name, p.Age)
+    }
+}
+```
+
+```bash
+$ go run sortfunc.go
+Vali: 25
+Guli: 28
+Ali: 30
+```
+
+Takeaway: `SortFunc` + `cmp.Compare` — istalgan maydon bo'yicha saralashning standart usuli.
+
+Manba / batafsil: [pkg.go.dev/slices#SortFunc](https://pkg.go.dev/slices#SortFunc)
+
+Standart kutubxonaning eng ko'p ishlatiladigan qismlari shular. Bu asos bilan ko'plab amaliy dasturlarni yozishga tayyorsiz.

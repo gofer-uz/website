@@ -1,0 +1,97 @@
+# Linked List
+
+Bog'langan ro'yxat (linked list) - bu tugunlar (node) zanjiri; har bir tugun o'z qiymatini va keyingi tugunga ko'rsatkichni (pointer) saqlaydi. Slice dan farqi shuki, tugunlar xotirada ketma-ket turmaydi. Shu bois boshiga qo'shish `O(1)` - hech narsani surishning hojati yo'q. Lekin `i`-elementga yetish uchun zanjirni boshidan aylanib chiqishga to'g'ri keladi, ya'ni `O(n)`.
+
+## Amallar murakkabligi
+
+| Amal | Bog'langan ro'yxat | Slice |
+| --- | --- | --- |
+| Boshiga qo'shish | `O(1)` | `O(n)` |
+| Oxiriga qo'shish (tail bilan) | `O(1)` | `O(1)`* |
+| Indeks bo'yicha o'qish | `O(n)` | `O(1)` |
+| Qidiruv | `O(n)` | `O(n)` |
+
+## Singly linked list Go da
+
+```go filename="linkedlist.go"
+package main
+
+import "fmt"
+
+type Node struct {
+    Val  int
+    Next *Node
+}
+
+type List struct {
+    Head *Node
+}
+
+// O(1): boshiga qo'shish
+func (l *List) Prepend(v int) {
+    l.Head = &Node{Val: v, Next: l.Head}
+}
+
+// O(n): oxiriga qo'shish
+func (l *List) Append(v int) {
+    n := &Node{Val: v}
+    if l.Head == nil {
+        l.Head = n
+        return
+    }
+    cur := l.Head
+    for cur.Next != nil {
+        cur = cur.Next
+    }
+    cur.Next = n
+}
+
+// O(n): birinchi uchragan qiymatni o'chirish
+func (l *List) Delete(v int) {
+    if l.Head == nil {
+        return
+    }
+    if l.Head.Val == v {
+        l.Head = l.Head.Next
+        return
+    }
+    cur := l.Head
+    for cur.Next != nil && cur.Next.Val != v {
+        cur = cur.Next
+    }
+    if cur.Next != nil {
+        cur.Next = cur.Next.Next
+    }
+}
+
+func (l *List) String() string {
+    s := ""
+    for cur := l.Head; cur != nil; cur = cur.Next {
+        s += fmt.Sprintf("%d -> ", cur.Val)
+    }
+    return s + "nil"
+}
+
+func main() {
+    l := &List{}
+    l.Append(2)
+    l.Append(3)
+    l.Prepend(1) // boshiga
+    fmt.Println(l)
+
+    l.Delete(2)
+    fmt.Println("2 o'chirilgach:", l)
+}
+```
+
+```bash
+$ go run linkedlist.go
+1 -> 2 -> 3 -> nil
+2 o'chirilgach: 1 -> 3 -> nil
+```
+
+Zanjirni aylanishning eng ko'p uchraydigan naqshi shu: `for cur := l.Head; cur != nil; cur = cur.Next`. Uni yaxshilab yodlab oling.
+
+**Xulosa:** Bog'langan ro'yxat boshiga tez qo'shadi, lekin tasodifiy kirishda (random access) sekin. Amaliy Go kodida ko'pincha slice yoki `container/list` yetib-ortadi.
+
+**Manba / batafsil:** [container/list - pkg.go.dev](https://pkg.go.dev/container/list)

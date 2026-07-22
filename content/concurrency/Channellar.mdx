@@ -1,0 +1,78 @@
+# Channellar
+
+Go'ning mashhur falsafasi: *xotirani baham ko'rib gaplashmang — gaplashib xotirani baham ko'ring.* Ya'ni umumiy o'zgaruvchi ustida chalkashish o'rniga, ma'lumotni **channel (kanal)** orqali bir goroutine'dan ikkinchisiga uzatasiz. Channel — tur jihatidan xavfsiz "quvur":
+
+```go
+ch := make(chan int)
+ch <- 42   // yuborish
+x := <-ch  // olish
+```
+
+`make(chan int)` bilan yaratilgan channel **unbuffered (bufersiz)**: ichida joy yo'q, shuning uchun yuborish qabul qiluvchi tayyor bo'lguncha, olish esa yuboruvchi qiymat berguncha bloklanadi. Ikki goroutine aynan shu nuqtada uchrashadi — bu ayni paytda sinxronizatsiya ham bo'ladi.
+
+```go filename="channel.go"
+package main
+
+import "fmt"
+
+func main() {
+    ch := make(chan string)
+
+    go func() {
+        ch <- "salom channel dan"
+    }()
+
+    msg := <-ch // goroutine yuborguncha kutadi
+    fmt.Println(msg)
+}
+```
+
+```bash
+$ go run channel.go
+salom channel dan
+```
+
+`Sleep` ham, `WaitGroup` ham kerak bo'lmadi — channel'ning o'zi sinxronizatsiyani uddaladi.
+
+## Yo'nalish, yopish, `range`
+
+Funksiya argumentida channel yo'nalishini cheklash mumkin: `chan<- int` faqat yuborish, `<-chan int` faqat olish uchun. Yuboruvchi "boshqa qiymat yo'q" deganini `close(ch)` bilan bildiradi (channel'ni faqat yuboruvchi yopadi; yopiq channel'ga yozish panic beradi). Barcha qiymatlarni o'qishning eng chiroyli usuli — `for range`: u channel yopilganda o'zi to'xtaydi:
+
+```go filename="range.go"
+package main
+
+import "fmt"
+
+func producer(out chan<- int) { // faqat yuborish uchun
+    for i := range 5 {
+        out <- i * i
+    }
+    close(out) // yozib bo'lgach yopamiz
+}
+
+func main() {
+    nums := make(chan int)
+    go producer(nums)
+
+    for n := range nums { // yopilganda to'xtaydi
+        fmt.Println("kvadrat:", n)
+    }
+}
+```
+
+```bash
+$ go run range.go
+kvadrat: 0
+kvadrat: 1
+kvadrat: 4
+kvadrat: 9
+kvadrat: 16
+```
+
+Agar goroutine `close(nums)` qilmasa, `range` yangi qiymatni abadiy kutib deadlock'ka tushadi (`fatal error: all goroutines are asleep - deadlock!`).
+
+**Qisqasi:** unbuffered channel yuborish va olishni sinxronlaydi; yuboruvchi ishini `close` bilan tugatadi, oluvchi esa `for range` bilan o'qiydi.
+
+Manba / batafsil: [go.dev/tour/concurrency/2](https://go.dev/tour/concurrency/2), [Go spec — Channel types](https://go.dev/ref/spec#Channel_types)
+
+Ichida joyi bor channel — ya'ni buffered channel — keyingi darsda.

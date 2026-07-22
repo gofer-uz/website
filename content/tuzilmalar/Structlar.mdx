@@ -1,0 +1,73 @@
+# Structlar
+
+`struct` — bu bir nechta maydonni (field) bitta nom ostida birlashtiradigan tuzilma. Bitta obyektni tasvirlash uchun bir nechta o'zgaruvchi kerak bo'lsa, ularni alohida-alohida saqlash o'rniga bitta `struct`ga yig'ib qo'yamiz.
+
+Quyidagi misolda struct e'loni, literal, maydonga murojaat, zero value va ichma-ich (nested) struct — hammasi bir joyda:
+
+```go filename="struct.go"
+package main
+
+import "fmt"
+
+type Address struct {
+    City   string
+    Street string
+}
+
+type User struct {
+    Name    string
+    Age     int
+    Address Address // nested struct
+}
+
+func main() {
+    u := User{
+        Name:    "Aziz",
+        Age:     25,
+        Address: Address{City: "Toshkent", Street: "Amir Temur 12"},
+    }
+
+    u.Age = 26 // maydonni o'zgartirish
+    fmt.Println(u.Name, u.Age, u.Address.City)
+
+    var empty User // zero value
+    fmt.Printf("%+v\n", empty)
+}
+```
+
+```bash
+$ go run struct.go
+Aziz 26 Toshkent
+{Name: Age:0 Address:{City: Street:}}
+```
+
+Xulosa: maydonlarga nuqta orqali murojaat qilamiz, boshlang'ich qiymat bermasak har biri o'zining zero value'sini oladi (`""`, `0`, `false`).
+
+Agar hamma maydonlari solishtirsa bo'ladigan turlarda bo'lsa, ikki `struct`ni `==` bilan tenglashtirish mumkin; nomi kerak bo'lmaydigan, bir martalik struct uchun esa anonim `struct` ishlatamiz:
+
+```go filename="compare.go"
+package main
+
+import "fmt"
+
+type Point struct{ X, Y int }
+
+func main() {
+    a := Point{1, 2}
+    b := Point{1, 2}
+    fmt.Println(a == b) // barcha maydonlar teng
+
+    tmp := struct{ Lat, Lng float64 }{41.31, 69.24} // anonim struct
+    fmt.Println(tmp.Lat, tmp.Lng)
+}
+```
+
+```bash
+$ go run compare.go
+true
+41.31 69.24
+```
+
+Xulosa: ichida `slice`, `map` yoki funksiya maydoni bor struct'ni `==` bilan solishtirib bo'lmaydi.
+
+Manba / batafsil: [Go spec — Struct types](https://go.dev/ref/spec#Struct_types)

@@ -1,0 +1,55 @@
+# Adapter
+
+**Muammo:** kodingiz bir interfeysga tayanadi, lekin qo'lda boshqacha metodli tayyor (yoki tashqi) tur bor. Uni o'zgartira olmaysiz - masalan, bu tashqi kutubxona.
+
+**G'oya:** o'rtaga adapter qo'yasiz - u eski turni o'rab, sizga kerakli interfeysni implement qiladi va chaqiruvlarni ichkaridagi metodlarga yo'naltiradi.
+
+```go filename="adapter.go"
+package main
+
+import "fmt"
+
+// Bizning kodimiz shu interfeysga tayanadi.
+type Notifier interface {
+	Notify(message string) error
+}
+
+// Eski, tashqi kutubxona - uni o'zgartira olmaymiz.
+type LegacyEmailClient struct{}
+
+func (LegacyEmailClient) SendEmail(subject, body string) {
+	fmt.Printf("EMAIL yuborildi | mavzu: %q | matn: %q\n", subject, body)
+}
+
+// EmailAdapter LegacyEmailClient ni Notifier ga moslashtiradi.
+type EmailAdapter struct {
+	client LegacyEmailClient
+}
+
+func (a EmailAdapter) Notify(message string) error {
+	a.client.SendEmail("Bildirishnoma", message)
+	return nil
+}
+
+func Broadcast(n Notifier, msg string) {
+	if err := n.Notify(msg); err != nil {
+		fmt.Println("xato:", err)
+	}
+}
+
+func main() {
+	var n Notifier = EmailAdapter{client: LegacyEmailClient{}}
+	Broadcast(n, "Serverda yangilanish bor")
+}
+```
+
+```bash
+$ go run adapter.go
+EMAIL yuborildi | mavzu: "Bildirishnoma" | matn: "Serverda yangilanish bor"
+```
+
+`Broadcast` faqat `Notifier` bilan ishlaydi; `LegacyEmailClient`ning `SendEmail` metodini adapter yashiradi.
+
+**Qachon:** mos kelmagan interfeyslarni ulash kerak bo'lganda - ayniqsa tashqi kod bilan. Go note: interfeys yashirin bo'lgani uchun adapter juda ixcham; ko'pincha `io.Reader`/`io.Writer` atrofida shu usul ishlatiladi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/adapter](https://refactoring.guru/design-patterns/adapter/go/example)

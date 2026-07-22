@@ -1,0 +1,64 @@
+# Versiyalash
+
+Go modullari **semantik versiyalash** (semver) qoidalariga qat'iy amal qiladi. `v1.6.0` kabi raqamlar shunchaki belgi emas - aniq va'da.
+
+## Semantik versiyalash
+
+Har bir versiya `vMAJOR.MINOR.PATCH` ko'rinishida:
+
+- **MAJOR** - moslikni buzuvchi o'zgarishda oshadi (`v1` → `v2`).
+- **MINOR** - eski kodni buzmaydigan yangi imkoniyatda oshadi.
+- **PATCH** - faqat xatolik tuzatilganda oshadi.
+
+Shuning uchun `v1.6.0` → `v1.7.0` odatda xavfsiz, `v1` → `v2` esa ehtiyot talab qiladi. `go get -u` shu sababdan sizni yangi major versiyaga o'zi sakratmaydi.
+
+**Xulosa:** raqam major bo'lsa - ehtiyot, minor/patch bo'lsa - odatda xavfsiz.
+
+## v2+ modul yo'liga qo'shiladi
+
+Go ning eng o'ziga xos qoidasi: agar modul `v2` yoki undan yuqoriga o'tsa, **major raqam modul yo'lining oxiriga qo'shiladi**:
+
+```go filename="go.mod"
+module github.com/foo/bar/v2
+
+go 1.22
+```
+
+```go
+import "github.com/foo/bar/v2"
+```
+
+Sababi: agar bir loyihada `v1` va `v2` bir vaqtda kerak bo'lsa, yo'llari boshqacha bo'lgani uchun Go ikkalasini yonma-yon saqlay oladi. `v0`/`v1` yo'lga hech narsa qo'shmaydi.
+
+**Xulosa:** `v2` dan boshlab yo'l oxiriga `/vN` yoziladi.
+
+## Pseudo-versiyalar
+
+Rasmiy teg emas, aniq bir commit kerak bo'lsa, Go **pseudo-version** ishlatadi (taxminiy versiya + commit sanasi + qisqa xesh):
+
+```bash
+$ go get github.com/foo/bar@abcdef1
+go: added github.com/foo/bar v1.6.1-0.20240115120000-abcdef123456
+```
+
+Uni qo'lda yozmaysiz - `go get` commit dan o'zi hosil qiladi. Ular ham semver tartibiga bo'ysunadi.
+
+**Xulosa:** pseudo-version - tegsiz commit ga to'la huquqli versiya.
+
+## go get pkg@version
+
+`@` orqali istalgan nishonga o'tasiz - versiya, `latest`, shox, teg yoki commit:
+
+```bash
+$ go get github.com/google/uuid@v1.6.0    # aniq versiya
+$ go get github.com/google/uuid@latest    # eng so'nggi barqaror
+$ go get github.com/google/uuid@v1.5.0    # eskiga qaytish (downgrade)
+```
+
+Eskiga qaytish ham yangilash kabi oson - shunchaki eskiroq raqamni ko'rsatasiz.
+
+**Xulosa:** `go get pkg@X` - X ga versiya, teg, shox yoki commit bo'lishi mumkin.
+
+Manba / batafsil: [go.dev/ref/mod - Versions](https://go.dev/ref/mod#versions) va [semver.org](https://semver.org)
+
+Endi bir vaqtda bir nechta modul ustida ishlashni osonlashtiruvchi **workspace** larga o'tamiz.

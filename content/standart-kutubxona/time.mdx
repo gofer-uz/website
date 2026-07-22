@@ -1,0 +1,198 @@
+# time
+
+Vaqt bilan ishlash ko'rinishidan oddiy, amalda nozik: mintaqalar, formatlar, davomiylik. Go ning eng g'ayrioddiy jihati — formatlash namunasi, uni alohida ko'ramiz.
+
+## time.Now va komponentlar
+
+`time.Now()` joriy vaqtni `time.Time` turida qaytaradi; undan yil, oy, kunni ajratib olish mumkin. `time.Date` bilan aniq vaqt yasaladi.
+
+```go filename="now.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    t := time.Date(2026, time.July, 22, 14, 30, 0, 0, time.UTC)
+    fmt.Println(t.Year(), t.Month(), t.Day())  // 2026 July 22
+    fmt.Println(t.Weekday())                    // Wednesday
+}
+```
+
+```bash
+$ go run now.go
+2026 July 22
+Wednesday
+```
+
+Takeaway: `time.Now()` chiqishi ish vaqtiga bog'liq; sinovda `time.Date` bilan aniq qiymat ishlating.
+
+Manba / batafsil: [pkg.go.dev/time#Now](https://pkg.go.dev/time#Now)
+
+## Duration
+
+`time.Duration` — vaqt oralig'i, `time.Second`/`Minute`/`Hour` konstantalari bilan ifodalanadi.
+
+```go filename="duration.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    d := 90 * time.Minute
+    fmt.Println(d)          // 1h30m0s
+    fmt.Println(d.Hours())  // 1.5
+    d2, _ := time.ParseDuration("2h45m")
+    fmt.Println(d2.Minutes())  // 165
+}
+```
+
+```bash
+$ go run duration.go
+1h30m0s
+1.5
+165
+```
+
+Takeaway: davomiylikni har doim konstantaga ko'paytirib yozing (`3 * time.Second`).
+
+Manba / batafsil: [pkg.go.dev/time#Duration](https://pkg.go.dev/time#Duration)
+
+## Formatlash — 2006-01-02 15:04:05 namunasi
+
+Go da format namunasi aniq bir sana bilan beriladi: **2006-yil 1-oy 2-kun 15:04:05**. Bu 1-2-3-4-5-6 ketma-ketligini beradi. Kerakli formatni shu namunani yozib hosil qilasiz.
+
+```go filename="format.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    t := time.Date(2026, time.July, 22, 14, 30, 45, 0, time.UTC)
+    fmt.Println(t.Format("2006-01-02 15:04:05"))
+    fmt.Println(t.Format("02.01.2006"))
+    fmt.Println(t.Format(time.RFC3339))
+}
+```
+
+```bash
+$ go run format.go
+2026-07-22 14:30:45
+22.07.2026
+2026-07-22T14:30:45Z
+```
+
+Takeaway: soat uchun `15` — 24 soatlik ko'rinish; `03` — 12 soatlik.
+
+Manba / batafsil: [pkg.go.dev/time#Time.Format](https://pkg.go.dev/time#Time.Format)
+
+## Parse
+
+`time.Parse` xuddi shu namuna orqali stringdan vaqt o'qiydi: birinchi argument — format, ikkinchisi — matn.
+
+```go filename="parse.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    t, err := time.Parse("2006-01-02", "2026-07-22")
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    fmt.Println(t.Format("02 Jan 2006"))  // 22 Jul 2026
+}
+```
+
+```bash
+$ go run parse.go
+22 Jul 2026
+```
+
+Takeaway: Parse va Format bir xil namuna sistemasini teskari yo'nalishda ishlatadi.
+
+Manba / batafsil: [pkg.go.dev/time#Parse](https://pkg.go.dev/time#Parse)
+
+## Add, Sub
+
+Vaqtga davomiylik qo'shish `Add`, ikki vaqt orasidagi farq `Sub` bilan (`Duration` qaytaradi). Taqqoslash: `Before`, `After`.
+
+```go filename="addsub.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    start := time.Date(2026, 7, 22, 9, 0, 0, 0, time.UTC)
+    end := time.Date(2026, 7, 22, 17, 30, 0, 0, time.UTC)
+    fmt.Println(end.Sub(start))          // 8h30m0s
+    fmt.Println(start.Add(48 * time.Hour).Format("2006-01-02"))
+    fmt.Println(start.Before(end))        // true
+}
+```
+
+```bash
+$ go run addsub.go
+8h30m0s
+2026-07-24
+true
+```
+
+Takeaway: `Sub` ayirmani `Duration` qilib beradi — soat/kunini oson chiqarasiz.
+
+Manba / batafsil: [pkg.go.dev/time#Time.Sub](https://pkg.go.dev/time#Time.Sub)
+
+## Sleep va Ticker
+
+`time.Sleep` dasturni to'xtatadi; `Ticker` muntazam intervalda kanalga signal yuboradi. Ticker'ni `Stop` bilan to'xtatishni unutmang.
+
+```go filename="ticker.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    ticker := time.NewTicker(200 * time.Millisecond)
+    defer ticker.Stop()
+
+    count := 0
+    for range ticker.C {
+        count++
+        fmt.Println("Tik", count)
+        if count == 3 {
+            break
+        }
+    }
+}
+```
+
+```bash
+$ go run ticker.go
+Tik 1
+Tik 2
+Tik 3
+```
+
+Takeaway: `ticker.C` — kanal; davriy vazifalarda `Stop` qilib resursni bo'shating.
+
+Manba / batafsil: [pkg.go.dev/time#NewTicker](https://pkg.go.dev/time#NewTicker)
+
+Keyingi qismda `encoding/json` — JSON bilan ishlashni ko'ramiz.

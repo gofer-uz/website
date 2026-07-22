@@ -1,0 +1,71 @@
+# Buffered Channellar
+
+Unbuffered channel'da har bir `ch <- v` qabul qiluvchini kutib turadi. **Buffered channel (buferli kanal)** esa ichida ma'lum sondagi qiymatni saqlab tura oladi — sig'imini `make` ning ikkinchi argumenti belgilaydi:
+
+```go
+ch := make(chan int, 3) // sig'imi 3 ta
+```
+
+Bufer to'lmaguncha yuborish bloklanmaydi. To'lib ketsa, yana bloklanadi; bufer bo'sh bo'lsa, olish bloklanadi. `cap(ch)` — umumiy sig'im, `len(ch)` — ayni damda ichidagi qiymatlar soni.
+
+```go filename="buffered.go"
+package main
+
+import "fmt"
+
+func main() {
+    ch := make(chan string, 2)
+
+    ch <- "birinchi"  // qabul qiluvchisiz ham joylashadi
+    ch <- "ikkinchi"
+
+    fmt.Println("len:", len(ch), "cap:", cap(ch))
+    fmt.Println(<-ch)
+    fmt.Println(<-ch)
+}
+```
+
+```bash
+$ go run buffered.go
+len: 2 cap: 2
+birinchi
+ikkinchi
+```
+
+E'tibor bering: bu yerda goroutine umuman yo'q. Unbuffered channel'da bu kod deadlock'ka tushardi — `ch <- "birinchi"` qabul qiluvchini kutib qotib qolardi. Bufer borligi uchun ikkala qiymat ham bemalol joylashdi.
+
+## Navbat (queue) sifatida
+
+Buffered channel — tayyor turgan, goroutine'lar uchun xavfsiz FIFO navbat. Yuboruvchi bilan oluvchi tezligi har xil bo'lganda juda qo'l keladi: ularni bir-biriga qattiq bog'lab qo'ymaydi — bo'sh joy borida yuboruvchi qiymatni tashlab, o'z ishida davom etaveradi:
+
+```go filename="queue.go"
+package main
+
+import "fmt"
+
+func main() {
+    queue := make(chan string, 3)
+
+    queue <- "vazifa-1"
+    queue <- "vazifa-2"
+    queue <- "vazifa-3"
+    close(queue)
+
+    for task := range queue { // kirgan tartibda chiqadi (FIFO)
+        fmt.Println("bajarilmoqda:", task)
+    }
+}
+```
+
+```bash
+$ go run queue.go
+bajarilmoqda: vazifa-1
+bajarilmoqda: vazifa-2
+bajarilmoqda: vazifa-3
+```
+
+**Qisqasi:** buffered channel bufer to'lguncha bloklanmaydi; yuboruvchi va oluvchi orasidagi tezlik farqini yumshatadigan FIFO navbat vazifasini bajaradi.
+
+Manba / batafsil: [go.dev/tour/concurrency/3](https://go.dev/tour/concurrency/3)
+
+Bir nechta channel'ni bir vaqtda kuzatish uchun `select` bor — keyingi darsda ko'ramiz.

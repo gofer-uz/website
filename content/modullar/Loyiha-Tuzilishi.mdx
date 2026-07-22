@@ -1,0 +1,50 @@
+# Loyiha Tuzilishi
+
+Go loyihasini qanday joylashtirish kerak? Qisqa javob: **kerak bo'lgunicha oddiy tuting**. Kichik loyihada bitta `main.go` va `go.mod` yetadi - papkalar bilan ovora bo'lmang. Loyiha o'sganda quyidagi tanish tuzilma yordamga keladi.
+
+## Tanish tuzilma
+
+```
+blog/
+├── go.mod
+├── cmd/
+│   └── server/
+│       └── main.go        <- package main, dastur shu yerdan boshlanadi
+├── internal/
+│   ├── store/
+│   │   └── store.go       <- faqat shu loyiha ichida ishlatiladigan kod
+│   └── auth/
+│       └── auth.go
+└── pkg/
+    └── slug/
+        └── slug.go        <- tashqi loyihalar ham ishlatishi mumkin bo'lgan kod
+```
+
+- **`cmd/`** - har bir bajariluvchi dastur uchun bitta papka. `cmd/server/main.go` `package main` bo'ladi. Bir loyihada bir necha dastur bo'lsa (`cmd/server`, `cmd/cli`), bu yerda ajratiladi.
+- **`internal/`** - loyihaning shaxsiy kodi; Go buni tashqi modullardan import qilishni taqiqlaydi. Ishning aksar qismi shu yerda yashaydi.
+- **`pkg/`** - boshqalar ham ishlatishi mumkin bo'lgan qayta ishlatiluvchi kod. Ishonchingiz komil bo'lmasa, `pkg/` shart emas - kodni `internal/` da qoldiring.
+
+**Xulosa:** `cmd/` - kirish nuqtalari, `internal/` - shaxsiy kod, `pkg/` - ochiq kod.
+
+## Oddiylikni saqlang
+
+Yangi loyihani `cmd/internal/pkg` bilan boshlash - keng tarqalgan xato. Kichik dasturga bu ortiqcha. Boshlash uchun yetarli:
+
+```
+salom/
+├── go.mod
+└── main.go
+```
+
+```bash
+$ go run .
+salom, dunyo
+```
+
+Tuzilma ehtiyojga qarab o'ssin: avval bitta fayl, keyin bir nechta paket, so'ng zarur bo'lsagina `cmd/` va `internal/`. Papka soni emas, kodning tushunarliligi muhim.
+
+**Xulosa:** tuzilmani oldindan quravermang - loyiha bilan birga o'stiring.
+
+Manba / batafsil: [Go loyihalari uchun tavsiya etilgan tuzilma](https://go.dev/doc/modules/layout)
+
+Oxirida esa kunda-kunora ishlatiladigan **go toolchain** buyruqlarini ko'rib chiqamiz.

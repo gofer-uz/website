@@ -1,0 +1,76 @@
+# Benchmarklar
+
+Test kodning to'g'riligini tekshiradi, benchmark esa uning **tezligini** o'lchaydi — u ham `testing` paketining bir qismi. Benchmark funksiyasi `Benchmark` bilan boshlanadi va `b *testing.B` argumentini oladi. Bu yerdagi eng muhim narsa — `b.N`: o'lchamoqchi bo'lgan kodni `for i := 0; i < b.N; i++` tsikliga qo'yasiz, Go esa natija barqarorlashguncha `b.N` ni o'zi oshirib boraveradi. `b.ReportAllocs()` natijaga xotira ajratish (allocation) statistikasini ham qo'shadi.
+
+Quyida ikkita satrni birlashtirish usulini solishtirib ko'ramiz:
+
+```go filename="concat.go"
+package main
+
+import "strings"
+
+func JoinLoop(parts []string) string {
+    result := ""
+    for _, p := range parts {
+        result += p
+    }
+    return result
+}
+
+func JoinBuilder(parts []string) string {
+    var b strings.Builder
+    for _, p := range parts {
+        b.WriteString(p)
+    }
+    return b.String()
+}
+```
+
+```go filename="concat_test.go"
+package main
+
+import (
+    "strings"
+    "testing"
+)
+
+func BenchmarkJoinLoop(b *testing.B) {
+    parts := strings.Fields(strings.Repeat("go ", 100))
+    b.ReportAllocs() // xotira statistikasini yoqadi
+    b.ResetTimer()   // tayyorgarlik vaqtini o'lchamaymiz
+    for i := 0; i < b.N; i++ {
+        JoinLoop(parts)
+    }
+}
+
+func BenchmarkJoinBuilder(b *testing.B) {
+    parts := strings.Fields(strings.Repeat("go ", 100))
+    b.ReportAllocs()
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        JoinBuilder(parts)
+    }
+}
+```
+
+Benchmarklar oddiy `go test` da ishga tushmaydi — `-bench` bayrog'i kerak (argumenti regexp; hammasini yugurtirish uchun `.` yozing):
+
+```bash
+$ go test -bench=.
+goos: linux
+goarch: amd64
+pkg: example/concat
+cpu: 12th Gen Intel(R) Core(TM) i7-1255U
+BenchmarkJoinLoop-12        173940      6820 ns/op    5400 B/op    99 allocs/op
+BenchmarkJoinBuilder-12    1000000      1043 ns/op     248 B/op     5 allocs/op
+PASS
+ok      example/concat  3.214s
+```
+
+`ns/op` — bitta chaqiriq necha nanosekund davom etgani; `B/op` va `allocs/op` — necha bayt va necha marta xotira ajratilgani. `JoinBuilder` ham tezroq (6820 ga qarshi 1043 ns), ham kamroq allocation qilyapti — `strings.Builder` afzalligi raqamlar bilan tasdiqlandi.
+
+**Xulosa:** `for i := 0; i < b.N; i++` tsikli + `go test -bench=.`; `b.ReportAllocs()` (yoki `-benchmem`) xotira ajratish statistikasini chiqaradi.
+
+Manba / batafsil: [pkg.go.dev/testing#hdr-Benchmarks](https://pkg.go.dev/testing#hdr-Benchmarks)
+
+Keyingi bo'limda kamroq tanilgan, ammo juda kuchli qurol — [fuzzing](/testlash/Fuzzing) ni ko'ramiz.

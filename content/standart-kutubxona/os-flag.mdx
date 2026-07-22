@@ -1,0 +1,131 @@
+# os va flag
+
+`os` — operatsion tizim bilan gaplashadigan paket: argumentlar, muhit o'zgaruvchilari (environment variables), fayllar. `flag` esa CLI dasturlarga berilgan bayroqlarni (flag) tartib bilan o'qib beradi.
+
+## os.Args
+
+`os.Args` — dasturga berilgan argumentlarning slice'i. Birinchi element (`os.Args[0]`) — dasturning o'zining nomi, qolganlari esa haqiqiy argumentlar.
+
+```go filename="args.go"
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    fmt.Println("Dastur:", os.Args[0])
+    fmt.Println("Argumentlar:", os.Args[1:])
+}
+```
+
+```bash
+$ go run args.go salom dunyo
+Dastur: /tmp/go-build.../args
+Argumentlar: [salom dunyo]
+```
+
+Qisqasi: `os.Args[0]` — dasturning yo'li; haqiqiy argumentlar `os.Args[1:]` ichida.
+
+Manba / batafsil: [pkg.go.dev/os#pkg-variables](https://pkg.go.dev/os#pkg-variables)
+
+## os.Getenv
+
+Muhit o'zgaruvchilari — config uzatishning eng oddiy yo'li. `Getenv` topilmagan o'zgaruvchiga bo'sh string qaytaradi; `LookupEnv` esa o'zgaruvchi bor-yo'qligini ham aytib beradi.
+
+```go filename="env.go"
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080"
+    }
+    fmt.Println("Port:", port)
+}
+```
+
+```bash
+$ PORT=3000 go run env.go
+Port: 3000
+$ go run env.go
+Port: 8080
+```
+
+Qisqasi: topilmagan o'zgaruvchiga standart qiymat bermoqchi bo'lsangiz, bo'sh stringni tekshiring.
+
+Manba / batafsil: [pkg.go.dev/os#Getenv](https://pkg.go.dev/os#Getenv)
+
+## Fayl o'qish va yozish
+
+Kichik fayllar uchun `os.WriteFile` va `os.ReadFile` juda qulay — bitta qatorda butun faylni yozib yoki o'qib beradi. Ular bayt (`[]byte`) bilan ishlaydi.
+
+```go filename="file.go"
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    os.WriteFile("salom.txt", []byte("salom fayl\n"), 0644)
+
+    data, err := os.ReadFile("salom.txt")
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    fmt.Print(string(data))
+}
+```
+
+```bash
+$ go run file.go
+salom fayl
+```
+
+Takeaway: kichik fayllarga `ReadFile`/`WriteFile`; katta fayllarni `bufio` bilan oqim qilib o'qing.
+
+Manba / batafsil: [pkg.go.dev/os#ReadFile](https://pkg.go.dev/os#ReadFile)
+
+## flag paketi
+
+`flag` bilan CLI bayroqlarini e'lon qilamiz: nom, standart qiymat, izoh. `flag.Parse()` ularni `os.Args` dan o'qiydi. Bayroqlar pointer qaytaradi.
+
+```go filename="flags.go"
+package main
+
+import (
+    "flag"
+    "fmt"
+)
+
+func main() {
+    name := flag.String("name", "dunyo", "kimga salom")
+    count := flag.Int("count", 1, "necha marta")
+    flag.Parse()
+
+    for range *count {
+        fmt.Printf("Salom, %s!\n", *name)
+    }
+}
+```
+
+```bash
+$ go run flags.go -name Ali -count 2
+Salom, Ali!
+Salom, Ali!
+```
+
+Takeaway: `flag` avtomatik `-h`/`--help` va tur tekshiruvini beradi — qo'lda `os.Args` tahlil qilishdan afzal.
+
+Manba / batafsil: [pkg.go.dev/flag](https://pkg.go.dev/flag)
+
+Keyingi qismda `log/slog` — strukturaviy loglashni ko'ramiz.

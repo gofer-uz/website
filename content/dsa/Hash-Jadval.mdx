@@ -1,0 +1,56 @@
+# Hash Jadval
+
+Xesh-jadval (hash table) - kalitni qiymatga bog'laydigan tuzilma, o'rtacha `O(1)` da qidiruv beradi. G'oyasi oddiy: kalit maxsus **xesh-funksiyadan** (hash function) o'tkaziladi, natija butun songa aylanadi, o'sha son esa massivning qaysi katagiga (bucket) yozishni ko'rsatadi. Ya'ni butun massivni aylanib o'tirmay, to'g'ridan-to'g'ri kerakli manzilga borasiz.
+
+Go da bu tuzilma tilning o'ziga o'rnatilgan - u `map`.
+
+## map amallari
+
+| Amal | O'rtacha | Eng yomon |
+| --- | --- | --- |
+| Qo'shish `m[k]=v` | `O(1)` | `O(n)` |
+| Olish `m[k]` | `O(1)` | `O(n)` |
+| O'chirish `delete` | `O(1)` | `O(n)` |
+
+"Eng yomon" holat to'qnashuvlar (collision) juda ko'payib ketganda yuz beradi - bu esa kamdan-kam. Amalda map deyarli hamisha `O(1)`.
+
+## To'qnashuv va load factor
+
+Ikki xil kalit bitta bucketga tushib qolsa, bu - to'qnashuv (collision). Xesh-jadval buni bir amallab hal qilishi kerak - masalan, har bucketda kichik ro'yxat saqlash yo'li bilan. Load factor esa elementlar sonining bucketlar soniga nisbati. U oshib ketsa qidiruv sekinlashadi, shu bois Go map o'zi kengayib, elementlarni qaytadan taqsimlaydi (rehash). Buni siz emas, tilning o'zi bajaradi.
+
+```go filename="hashmap.go"
+package main
+
+import "fmt"
+
+func main() {
+    // so'zlar chastotasini sanaymiz - hash jadvalning klassik ishi
+    words := []string{"olma", "nok", "olma", "uzum", "nok", "olma"}
+
+    freq := make(map[string]int)
+    for _, w := range words {
+        freq[w]++ // O(1) o'qish + yozish
+    }
+
+    // mavjudlikni tekshirish: comma-ok
+    if n, ok := freq["olma"]; ok {
+        fmt.Println("olma:", n, "marta")
+    }
+
+    fmt.Println("nok bor?", func() bool { _, ok := freq["banan"]; return ok }())
+    fmt.Println("jadval:", freq)
+}
+```
+
+```bash
+$ go run hashmap.go
+olma: 3 marta
+nok bor? false
+jadval: map[nok:2 olma:3 uzum:1]
+```
+
+Diqqat: map bo'ylab `range` qilinganda tartib tasodifiy chiqadi - Go buni ataylab aralashtiradi. Tartibli chiqish kerak bo'lsa, kalitlarni slice ga yig'ib `slices.Sort` qiling.
+
+**Xulosa:** map - o'rtacha `O(1)` da ishlaydigan kalit-qiymat tuzilmasi. To'qnashuv va kengayishni Go o'zi boshqaradi.
+
+**Manba / batafsil:** [Go maps in action](https://go.dev/blog/maps)

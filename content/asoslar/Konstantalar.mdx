@@ -1,6 +1,6 @@
 # Konstantalar
 
-Konstantalar - o'zgarmaydigan qiymatlar. `const` kalit so'zi bilan e'lon qilinadi.
+Konstantalar — bir marta belgilangach o'zgarmaydigan qiymatlar. `const` kalit so'zi bilan e'lon qilinadi.
 
 ## Oddiy konstanta
 
@@ -8,24 +8,24 @@ Konstantalar - o'zgarmaydigan qiymatlar. `const` kalit so'zi bilan e'lon qilinad
 const s string = "constant"
 ```
 
-Konstanta bir marta e'lon qilinadi va keyinchalik o'zgartirib bo'lmaydi.
+Konstanta bir marta e'lon qilingandan keyin uni o'zgartirib bo'lmaydi.
 
 ## Raqamli konstantalar
 
-Raqamli konstantalarning o'ziga xos xususiyati bor - ular ishlatilgunga qadar aniq turi bo'lmaydi:
+Raqamli konstantalarning bir qiziq jihati bor — ular ishlatilgunga qadar aniq turga ega bo'lmaydi:
 
 ```go
 const n = 500000000  // Bu hali int yoki float emas
 ```
 
-Faqat ishlatilganda turi aniqlanadi:
+Turi faqat qayerda ishlatilsa, o'sha yerda aniqlanadi:
 
 ```go
 fmt.Println(int64(n))   // Bu yerda int64 bo'ldi
 fmt.Println(math.Sin(n)) // Bu yerda float64 bo'ldi
 ```
 
-Bu nimaga kerak? Katta sonlar bilan ishlashda xatolik bo'lmasligi uchun. Konstantalar juda aniq hisoblashlar qiladi:
+Buning nima keragi bor? Katta sonlar bilan ishlaganda aniqlik yo'qolmasligi uchun. Konstantalar hisob-kitobni juda yuqori aniqlikda bajaradi:
 
 ```go
 const d = 3e20 / n  // Juda katta son, lekin xatolik yo'q

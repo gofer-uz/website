@@ -1,0 +1,307 @@
+# Mashqlar
+
+Modullar bo'limi ko'proq amaliyot talab qiladi — buyruqlarni terminalda o'zingiz terib, natijani ko'rish kerak. Har bir mashqni avval mustaqil bajaring: papka oching, fayllarni yozing, buyruqlarni ishga tushiring. Faqat tiqilib qolsangiz yechimni oching. Yechimlarda kerakli buyruqlar, fayl tuzilishi va kutilgan natija ko'rsatilgan.
+
+## 1. Yangi modul yaratish
+
+`hisobot` nomli papka oching, uni `example.com/hisobot` moduliga aylantiring, oddiy `main.go` yozing va ishga tushiring. `go.mod` fayli qanday ko'rinadi?
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```bash
+$ mkdir hisobot && cd hisobot
+$ go mod init example.com/hisobot
+go: creating new go.mod: module example.com/hisobot
+```
+
+```go filename="main.go"
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("hisobot tayyor")
+}
+```
+
+```go filename="go.mod"
+module example.com/hisobot
+
+go 1.22
+```
+
+```bash
+$ go run .
+hisobot tayyor
+```
+
+`go mod init <yo'l>` bo'sh papkani modulga aylantiradi; modul yo'li — boshqalar sizni `import` qiladigan manzil.
+
+</details>
+
+## 2. Nega funksiya ko'rinmayapti?
+
+Sizda `narx` paketi bor, lekin `main.go` dan uni chaqirsangiz `undefined: narx.hisobla` xatosi chiqadi. Sababi nima va uni qanday tuzatasiz? Modul yo'li `example.com/dokon`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+Muammo — funksiya nomi **kichik harf** bilan boshlanadi, shuning uchun u eksport qilinmagan va faqat o'z paketi ichida ko'rinadi. Nomni katta harfga o'tkazsangiz, boshqa paketdan chaqirsa bo'ladi:
+
+```go filename="narx/narx.go"
+package narx
+
+// Hisobla — eksport qilingan (katta harf bilan).
+func Hisobla(soni, birlik int) int {
+    return soni * birlik
+}
+```
+
+```go filename="main.go"
+package main
+
+import (
+    "fmt"
+
+    "example.com/dokon/narx"
+)
+
+func main() {
+    fmt.Println(narx.Hisobla(3, 5000))
+}
+```
+
+```bash
+$ go run .
+15000
+```
+
+Qoida sodda: katta harf — ochiq (eksport), kichik harf — yopiq. Bu struct maydonlariga ham tegishli.
+
+</details>
+
+## 3. Tashqi paket qo'shish va tozalash
+
+Loyihangizga `github.com/google/uuid` paketini qo'shing, undan UUID generatsiya qilishda foydalaning, so'ng `go.mod` ni toza holatga keltiring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```bash
+$ go get github.com/google/uuid
+go: added github.com/google/uuid v1.6.0
+```
+
+```go filename="main.go"
+package main
+
+import (
+    "fmt"
+
+    "github.com/google/uuid"
+)
+
+func main() {
+    fmt.Println(uuid.NewString())
+}
+```
+
+```bash
+$ go mod tidy
+$ go run .
+9b2e4f7a-3c1d-4e8b-a6f0-1d2c3b4a5e6f
+```
+
+`go get` paketni qo'shadi va `go.mod` ga `require github.com/google/uuid v1.6.0` yozadi; `go mod tidy` esa ortiqchasini olib, yetishmaganini qo'shib, faylni haqiqiy kodga moslaydi. Commit'dan oldin doim `go mod tidy` qiling.
+
+</details>
+
+## 4. v2 ga o'tish
+
+Modulingiz `github.com/foo/hisob` moslikni buzuvchi o'zgarish qildi va `v2.0.0` ga o'tmoqda. `go.mod` va import yo'li qanday o'zgaradi?
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+`v2` va undan yuqori versiyada major raqam **modul yo'lining oxiriga** qo'shiladi:
+
+```go filename="go.mod"
+module github.com/foo/hisob/v2
+
+go 1.22
+```
+
+Endi boshqalar uni import qilganda ham yo'l oxirida `/v2` bo'ladi:
+
+```go
+import "github.com/foo/hisob/v2"
+```
+
+Versiyani teg bilan chiqarasiz:
+
+```bash
+$ git tag v2.0.0
+$ git push origin v2.0.0
+```
+
+Sababi: yo'llari boshqacha bo'lgani uchun bir loyihada `v1` va `v2` yonma-yon yashay oladi. `v0` va `v1` yo'lga hech narsa qo'shmaydi — `/vN` faqat `v2` dan boshlanadi.
+
+</details>
+
+## 5. Workspace bilan lokal modullarni bog'lash
+
+`mat` — kichik kutubxona modul, `app` — uni ishlatuvchi dastur. `mat` hali hech qayerga chiqarilmagan. Workspace bilan `app` ni lokal `mat` ga bog'lang va ishga tushiring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+Tuzilma:
+
+```
+ish/
+├── mat/
+│   ├── go.mod          <- module example.com/mat
+│   └── mat.go
+└── app/
+    ├── go.mod          <- module example.com/app
+    └── main.go
+```
+
+```go filename="mat/mat.go"
+package mat
+
+func Qosh(a, b int) int { return a + b }
+```
+
+```go filename="app/main.go"
+package main
+
+import (
+    "fmt"
+
+    "example.com/mat"
+)
+
+func main() {
+    fmt.Println(mat.Qosh(2, 3))
+}
+```
+
+`ish/` papkasida workspace ochamiz:
+
+```bash
+$ cd ish
+$ go work init ./mat ./app
+```
+
+Bu `go.work` faylini yaratadi:
+
+```go filename="go.work"
+go 1.22
+
+use (
+    ./mat
+    ./app
+)
+```
+
+```bash
+$ go run ./app
+5
+```
+
+Workspace Go ga "bu modulni internetdan emas, lokal papkadan ol" deydi. `mat` ga kiritgan har o'zgarish `app` da darrov aks etadi — `go get` yoki e'lon qilish shart emas. `go.work` ni `git` ga qo'shmang.
+
+</details>
+
+## 6. Loyihani cmd/ va internal/ bilan tuzish
+
+`dostlar` nomli CLI loyihasini standart tuzilishda joylashtiring: kirish nuqtasi `cmd/` da, ichki kod `internal/` da bo'lsin. Modul yo'li `example.com/dostlar`.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```
+dostlar/
+├── go.mod
+├── cmd/
+│   └── dostlar/
+│       └── main.go       <- package main, kirish nuqtasi
+└── internal/
+    └── greet/
+        └── greet.go      <- faqat shu loyiha ichida ishlatiladi
+```
+
+```go filename="internal/greet/greet.go"
+package greet
+
+import "fmt"
+
+func Greet(name string) string {
+    return fmt.Sprintf("Salom, %s!", name)
+}
+```
+
+```go filename="cmd/dostlar/main.go"
+package main
+
+import (
+    "fmt"
+
+    "example.com/dostlar/internal/greet"
+)
+
+func main() {
+    fmt.Println(greet.Greet("Ali"))
+}
+```
+
+```bash
+$ go run ./cmd/dostlar
+Salom, Ali!
+```
+
+`internal/` ichidagi paketni faqat shu modulning o'zi import qila oladi — tashqi loyihalar yo'q. Shuning uchun `greet` ni bemalol o'zgartira olasiz. Eslatma: kichik loyihaga bu tuzilma shart emas, faqat o'sib borgan sari qo'llang.
+
+</details>
+
+## 7. Formatlash, tekshiruv va cross-compilation
+
+Loyihani rasmiy uslubga keltiring, shubhali kodni tekshiring, so'ng versiyani binaryga yozib, Windows va Linux (arm64) uchun binary quring.
+
+<details>
+<summary>Yechimni ko'rish</summary>
+
+```go filename="main.go"
+package main
+
+import "fmt"
+
+var version = "dev"
+
+func main() {
+    fmt.Println("versiya:", version)
+}
+```
+
+```bash
+$ go fmt ./...
+$ go vet ./...
+$ go build -ldflags="-X main.version=1.0.0" -o app .
+$ ./app
+versiya: 1.0.0
+```
+
+`-ldflags="-X main.version=1.0.0"` linkerga `main.version` o'zgaruvchisini build paytida to'ldirishni buyuradi. Boshqa platformalar uchun `GOOS`/`GOARCH` ni belgilang — qo'shimcha asbob kerak emas:
+
+```bash
+$ GOOS=windows GOARCH=amd64 go build -o app.exe .
+$ GOOS=linux GOARCH=arm64 go build -o app-arm .
+```
+
+Mavjud platformalar ro'yxatini `go tool dist list` da ko'rasiz. Bitta mashinadan barcha platformalarga binary qurish — Go ning eng kuchli tomonlaridan biri.
+
+</details>
+
+Bularni yechgan bo'lsangiz, modul yaratishdan boshlab, bog'liqliklarni boshqarish, loyihani tuzish va binary chiqargacha bo'lgan butun oqimni egallagansiz.

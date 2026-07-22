@@ -1,0 +1,79 @@
+# Defer
+
+`defer` funksiya chaqiruvini "keyinga qoldiradi": defer qilingan chaqiruv shu funksiya tugagach, `return` bo'lishidan oldin bajariladi. U ko'pincha tozalash uchun ishlatiladi - fayl yopish, qulfni bo'shatish. G'oya oddiy: resursni ochgan joyning yonida uni yopishni ham yozib qo'yasiz, shunda funksiya qaysi yo'l bilan tugashidan qat'i nazar tozalash bajariladi.
+
+## LIFO tartibi va tozalash
+
+Bir funksiyada bir nechta `defer` bo'lsa, ular teskari tartibda ishlaydi - oxirgi defer birinchi (LIFO, xuddi stek kabi). Quyida faylni ochgan zahoti `defer f.Close()` yozamiz:
+
+```go filename="defer-cleanup.go"
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func faylgaYoz(nom, matn string) error {
+	f, err := os.Create(nom)
+	if err != nil {
+		return err
+	}
+	defer f.Close() // funksiya tugashi bilan yopiladi
+
+	_, err = f.WriteString(matn)
+	return err
+}
+
+func main() {
+	nom := "/tmp/salom.txt"
+	if err := faylgaYoz(nom, "assalomu alaykum\n"); err != nil {
+		fmt.Println("xatolik:", err)
+		return
+	}
+	data, _ := os.ReadFile(nom)
+	fmt.Print(string(data))
+	os.Remove(nom)
+}
+```
+
+```bash
+$ go run defer-cleanup.go
+assalomu alaykum
+```
+
+`WriteString` xato bergan holatda ham, normal tugagan holatda ham fayl yopiladi - har `return` oldiga qo'lda `f.Close()` yozib chiqish shart emas.
+
+## Argumentlar defer paytida hisoblanadi
+
+Bu eng ko'p yanglishtiradigan detal: defer qilingan chaqiruvning argumentlari `defer` yozilgan payt hisoblanadi, chaqiruv bajarilgan payt emas.
+
+```go filename="defer-args.go"
+package main
+
+import "fmt"
+
+func main() {
+	x := 10
+	defer fmt.Println("defer ichida x =", x) // x hozir 10, shu qiymat muzlatiladi
+
+	x = 20
+	fmt.Println("main oxirida x =", x)
+}
+```
+
+```bash
+$ go run defer-args.go
+main oxirida x = 20
+defer ichida x = 10
+```
+
+`defer` yozilgan paytda `x` `10` edi, shuning uchun defer o'sha `10` ni saqlab qoldi. Eng oxirgi qiymatni istasangiz, argumentda emas, closure ichida (`defer func(){ ... x ... }()`) o'qing.
+
+Bir eslatma: `defer` funksiya tugaganda ishlaydi, sikl iteratsiyasi tugaganda emas. Uzun siklda har iteratsiyada resurs ochib defer bilan yopsangiz, ular funksiya oxirigacha to'planadi - bunday hollarda iteratsiya tanasini alohida funksiyaga o'rang.
+
+**Takeaway:** `defer` tozalashni kafolatlaydi; argumentlari darrov hisoblanadi, chaqiruv esa funksiya oxirida LIFO tartibida bo'ladi.
+
+**Manba / batafsil:** [Defer, Panic, and Recover (Go blog)](https://go.dev/blog/defer-panic-and-recover), [defer (Go spec)](https://go.dev/ref/spec#Defer_statements)
+
+Keyingi mavzuda dastur buzilganda ishga tushadigan `panic` va `recover` ni ko'ramiz.

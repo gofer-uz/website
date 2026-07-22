@@ -1,0 +1,157 @@
+# net/http: Client
+
+Teskari tomon — boshqa serverga so'rov yuborish. Tashqi API'lardan ma'lumot olish, webhook, microservice'lar orasidagi aloqa HTTP client bilan bo'ladi.
+
+## http.Get
+
+`http.Get` GET so'rov yuboradi va `*http.Response` qaytaradi. Ikki qoida: `err` ni tekshiring, `resp.Body.Close()` ni `defer` qiling — aks holda ulanish oqib ketadi.
+
+```go filename="get.go"
+package main
+
+import (
+    "fmt"
+    "io"
+    "net/http"
+)
+
+func main() {
+    resp, err := http.Get("https://example.com")
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    defer resp.Body.Close()
+
+    body, _ := io.ReadAll(resp.Body)
+    fmt.Println("Status:", resp.StatusCode)
+    fmt.Println("Tana:", len(body), "bayt")
+}
+```
+
+```bash
+$ go run get.go
+Status: 200
+Tana: 559 bayt
+```
+
+Takeaway: `resp.Body` — oqim (`io.ReadCloser`); doim `defer resp.Body.Close()`.
+
+Manba / batafsil: [pkg.go.dev/net/http#Get](https://pkg.go.dev/net/http#Get)
+
+## JSON javobni o'qish
+
+Javob tanasini `json.NewDecoder(resp.Body).Decode(...)` bilan to'g'ridan-to'g'ri struct'ga o'qiymiz — butun tanani xotiraga yuklamasdan.
+
+```go filename="getjson.go"
+package main
+
+import (
+    "encoding/json"
+    "fmt"
+    "net/http"
+)
+
+type Todo struct {
+    ID    int    `json:"id"`
+    Title string `json:"title"`
+}
+
+func main() {
+    resp, err := http.Get("https://jsonplaceholder.typicode.com/todos/1")
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    defer resp.Body.Close()
+
+    var todo Todo
+    json.NewDecoder(resp.Body).Decode(&todo)
+    fmt.Printf("%d: %s\n", todo.ID, todo.Title)
+}
+```
+
+```bash
+$ go run getjson.go
+1: delectus aut autem
+```
+
+Takeaway: oqimdan to'g'ridan-to'g'ri `Decode` — `io.ReadAll` + `Unmarshal` dan tejamkorroq.
+
+Manba / batafsil: [pkg.go.dev/encoding/json#Decoder](https://pkg.go.dev/encoding/json#Decoder)
+
+## http.Client va timeout
+
+`http.Get`/`Post` ichidagi standart client'ning **timeout'i yo'q** — sekin server dasturni cheksiz kutib qoldiradi. Har doim o'z client'ingizni timeout bilan yarating.
+
+```go filename="client.go"
+package main
+
+import (
+    "fmt"
+    "net/http"
+    "time"
+)
+
+func main() {
+    client := &http.Client{Timeout: 10 * time.Second}
+    resp, err := client.Get("https://example.com")
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    defer resp.Body.Close()
+    fmt.Println("Status:", resp.Status)
+}
+```
+
+```bash
+$ go run client.go
+Status: 200 OK
+```
+
+Takeaway: ishlab chiqarishda hech qachon timeout'siz standart client'ga tayanmang.
+
+Manba / batafsil: [pkg.go.dev/net/http#Client](https://pkg.go.dev/net/http#Client)
+
+## So'rovni qo'lda qurish va sarlavhalar
+
+Sarlavha (masalan token) qo'shish yoki boshqa metod uchun `http.NewRequest` bilan so'rov quramiz va `client.Do` bilan yuboramiz. `Get`/`Post` aslida shuning ustidagi qulay qobiqlar.
+
+```go filename="request.go"
+package main
+
+import (
+    "fmt"
+    "net/http"
+    "time"
+)
+
+func main() {
+    client := &http.Client{Timeout: 10 * time.Second}
+    req, _ := http.NewRequest("GET", "https://jsonplaceholder.typicode.com/todos/1", nil)
+    req.Header.Set("Authorization", "Bearer maxfiy-token")
+    req.Header.Set("Accept", "application/json")
+
+    resp, err := client.Do(req)
+    if err != nil {
+        fmt.Println("Xato:", err)
+        return
+    }
+    defer resp.Body.Close()
+    fmt.Println("Status:", resp.Status)
+    fmt.Println("Content-Type:", resp.Header.Get("Content-Type"))
+}
+```
+
+```bash
+$ go run request.go
+Status: 200 OK
+Content-Type: application/json; charset=utf-8
+```
+
+Takeaway: `NewRequest` + `client.Do` — sarlavha, metod va tanani to'liq boshqarish.
+
+Manba / batafsil: [pkg.go.dev/net/http#NewRequest](https://pkg.go.dev/net/http#NewRequest)
+
+Keyingi qismda `io` va `bufio` — oqimlar bilan ishlashni ko'ramiz.

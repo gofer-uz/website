@@ -1,0 +1,37 @@
+# Dizayn Patternlar
+
+Dizayn pattern (design pattern) — bu tez-tez uchrab turadigan muammoning tayyor, sinovdan o'tgan yechimi. Bu kod emas, ko'proq fikrlash usuli: "bunaqa vazifani odatda mana shunday tuzasan". Ular 1994-yilda chiqqan "Design Patterns" kitobidan keyin ommalashgan. Kitobni to'rt kishi yozgani uchun bu patternlarni ko'pincha GoF (Gang of Four) patternlari deb ataymiz.
+
+GoF patternlari uchta guruhga bo'linadi:
+
+- **Creational** (yaratuvchi) — obyektlarni qanday yaratishni hal qiladi: Singleton, Factory, Builder va hokazo.
+- **Structural** (tuzilmaviy) — obyektlarni bir-biriga qanday ulashni hal qiladi: Adapter, Decorator, Facade, Proxy.
+- **Behavioral** (xulq-atvor) — obyektlar bir-biri bilan qanday gaplashishi va vazifa qanday taqsimlanishini tartibga soladi: Strategy, Observer, Command, State va boshqalar.
+
+## Go va patternlar
+
+Patternlarning ko'pchiligi Java va C++ dunyosida tug'ilgan. U tillarda class ierarxiyasi, `abstract` classlar, meros (inheritance) hamma narsaning markazida turadi. Go esa boshqacha qurilgan. Shu sababli ayrim patternlar Go'da umuman yo'qoladi, ba'zilari esa shunchalik tabiiy bo'lib ketadiki, ularni alohida "pattern" deb atashning hojati ham qolmaydi.
+
+Buning uchta sababi bor.
+
+Birinchidan, Go'da meros yo'q. Uning o'rnida **composition** bor: bitta `struct` ichiga boshqasini joylaysan (embedding), va uning metodlari o'z-o'zidan tashqi turga o'tadi. Klassik patternlarning yarmi "meros o'rniga composition ishlat" degan maslahatni qat'iy qoidaga aylantiradi — Go buni tilning o'zida hal qilib qo'ygan.
+
+Ikkinchidan, Go'da `interface` yashirin (implicit) qanoatlantiriladi. "Men bu interfeysni implement qilyapman" deb hech qayerda yozib o'tirmaysan. Tur kerakli metodlarga ega bo'lsa, o'zi avtomatik ravishda interfeysga mos keladi. Shu narsa Adapter, Strategy, Factory kabi patternlarni juda yengil qiladi.
+
+Uchinchidan, Go'da **funksiya — oddiy qiymat**. Uni o'zgaruvchiga berish, argument qilib uzatish, `struct` maydoni (field) qilish mumkin. Shuning uchun Strategy yoki Command uchun butun boshli class ierarxiyasi shart emas — ba'zan bitta `func` yetib beradi.
+
+## Qachon pattern kerak emas
+
+GoF kitobidagi ayrim patternlar Go'da amalda ortiqcha bo'lib qoladi:
+
+- **Iterator** — Go'da `range` va `for` bor, Go 1.23'dan boshlab `range` orqali iterator funksiyalari ham ishlaydi. Alohida Iterator obyektiga ehtiyoj yo'q.
+- **Prototype** — qiymat turlarini nusxalash Go'da o'zidan tabiiy: `b := a` deb yozsang, `struct` nusxalanadi. Alohida `Clone` ierarxiyasi kamdan-kam kerak bo'ladi.
+- **Abstract Factory** ko'pincha oddiy factory funksiyaga qisqaradi, chunki interfeys va yopilma (closure) funksiyalar ishni yengillashtiradi.
+
+Shu bilan birga, ayrim patternlar Go'da aksincha kuchayadi va deyarli har kuni ishlatiladi: HTTP `middleware`, `channel`lardan qurilgan `pipeline` va konfiguratsiya uchun **functional options**. Bularni alohida "Go-idiomatik" guruhida ko'rib chiqamiz.
+
+## Bu bo'limda nima bor
+
+Har bir patternni bir xil tartibda ko'ramiz: avval u **qaysi muammoni** hal qilishini, keyin **qanday ishlashini**, so'ng to'liq ishlaydigan Go misoli va uning natijasini. Maqsad — patternni yodlash emas, uni qachon ishlatish va, muhimi, qachon ishlatmaslikni his qilish.
+
+Boshlaymiz eng ko'p bahs tug'diradigan patterndan — Singleton.

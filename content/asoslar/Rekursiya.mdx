@@ -1,0 +1,41 @@
+# Rekursiya
+
+Rekursiya — funksiyaning o'zi-o'zini chaqirishi. Har qanday rekursiv funksiyada ikki narsa bo'lishi shart: **bazaviy holat** (to'xtash sharti) va **rekursiv qadam** (masalani kichraytirib qayta chaqirish). Bazaviy holatni qo'ymasangiz, funksiya o'zini cheksiz chaqiraveradi va oxir-oqibat `stack overflow` bilan qulaydi.
+
+```go filename="rekursiya.go"
+package main
+
+import "fmt"
+
+func fact(n int) int {
+    if n == 0 {
+        return 1
+    }
+    return n * fact(n-1)
+}
+
+func fib(n int) int {
+    if n < 2 {
+        return n
+    }
+    return fib(n-1) + fib(n-2)
+}
+
+func main() {
+    fmt.Println("5! =", fact(5))
+    for i := range 10 {
+        fmt.Print(fib(i), " ")
+    }
+    fmt.Println()
+}
+```
+
+```bash
+$ go run rekursiya.go
+5! = 120
+0 1 1 2 3 5 8 13 21 34 
+```
+
+> Bazaviy holatni eng avval yozing — aynan u rekursiyani to'xtatib, cheksiz chaqiruvning oldini oladi.
+
+**Manba / batafsil:** [Go spec — Function declarations](https://go.dev/ref/spec#Function_declarations)

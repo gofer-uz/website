@@ -1,0 +1,33 @@
+# Slice
+
+`slice` — massiv ustiga qurilgan, kerakligicha cho'ziladigan qatlam va Go'da eng ko'p ishlatadigan turimiz. `make` bilan yaratamiz, `append` bilan o'stiramiz (`len` — elementlar soni, `cap` — hozircha ajratilgan joy sig'imi), `s[low:high]` bilan bir bo'lagini kesib olamiz. Hech qiymat berilmagan `slice` `nil` bo'ladi, lekin unga ham bemalol `append` qilaverasiz.
+
+```go filename="slice.go"
+package main
+
+import "fmt"
+
+func main() {
+    s := make([]string, 2)
+    s[0], s[1] = "a", "b"
+    s = append(s, "c", "d")
+    fmt.Println(s, "len:", len(s), "cap:", cap(s))
+
+    nums := []int{0, 1, 2, 3, 4, 5}
+    fmt.Println(nums[2:5], nums[:2], nums[4:])
+
+    var n []int
+    fmt.Println(n == nil, len(n))
+}
+```
+
+```bash
+$ go run slice.go
+[a b c d] len: 4 cap: 4
+[2 3 4] [0 1] [4 5]
+true 0
+```
+
+> `slice` uzunligi o'zgaruvchan; `append` kerak bo'lganda o'zi joy ajratadi, `s[low:high]` da `high` esa oralig'ga kirmaydi.
+
+**Manba / batafsil:** [Go blog — Slices: usage and internals](https://go.dev/blog/slices-intro)

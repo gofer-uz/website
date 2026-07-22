@@ -1,0 +1,72 @@
+# Enumlar
+
+Enum — bu chekli, aniq qiymatlar to'plami: hafta kunlari, buyurtma holati va hokazo. Go'da alohida `enum` kalit so'zi yo'q, uning o'rniga nomlangan tur (type), `const` va `iota` birgalikda ishlatiladi. `iota` — `const` blokida `0`dan boshlab har bir qatorda `1`ga o'sib boradigan hisoblagich. Alohida tur (`Weekday`) berib qo'ysangiz, kompilyator xatolarni ushlashda yordam beradi.
+
+Enum qiymatini shunchaki chop etsangiz, faqat son chiqadi. Buni tuzatish uchun `String()` metodini yozamiz (Stringer) — shunda `fmt` sonni o'zi nomga aylantirib beradi:
+
+```go filename="enum.go"
+package main
+
+import "fmt"
+
+type Weekday int
+
+const (
+    Sunday Weekday = iota // 0
+    Monday                // 1
+    Tuesday               // 2
+    Wednesday             // 3
+)
+
+func (d Weekday) String() string {
+    names := []string{"Yakshanba", "Dushanba", "Seshanba", "Chorshanba"}
+    if d < Sunday || int(d) >= len(names) {
+        return "Noma'lum kun"
+    }
+    return names[d]
+}
+
+func main() {
+    today := Wednesday
+    fmt.Println("Bugun:", today)   // String() ishga tushadi
+    fmt.Println("Raqami:", int(today))
+}
+```
+
+```bash
+$ go run enum.go
+Bugun: Chorshanba
+Raqami: 3
+```
+
+Xulosa: `iota` ketma-ket qiymatlarni o'zi qo'yib chiqadi, `String()` esa `3` o'rniga `Chorshanba` deb yozadi.
+
+`iota` ifoda ichida ham ishlaydi, shuning uchun undan boshqa ketma-ketliklarni ham qurish mumkin — masalan o'lchov birliklarini (har biri oldingisidan 1024 barobar katta):
+
+```go filename="iota-shift.go"
+package main
+
+import "fmt"
+
+type ByteSize float64
+
+const (
+    _           = iota             // 0 ni tashlaymiz
+    KB ByteSize = 1 << (10 * iota) // 1 << 10
+    MB                             // 1 << 20
+    GB                             // 1 << 30
+)
+
+func main() {
+    fmt.Printf("KB=%.0f MB=%.0f GB=%.0f\n", KB, MB, GB)
+}
+```
+
+```bash
+$ go run iota-shift.go
+KB=1024 MB=1048576 GB=1073741824
+```
+
+Xulosa: `_` bilan keraksiz qiymatni tashlab yuborib, `iota`ni ifoda ichida ishlatasiz — shu yo'l bilan murakkabroq enumlar tuziladi.
+
+Manba / batafsil: [Go spec — Iota](https://go.dev/ref/spec#Iota)

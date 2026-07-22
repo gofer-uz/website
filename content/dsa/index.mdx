@@ -1,0 +1,31 @@
+# Algoritmlar va Ma'lumotlar Tuzilmalari
+
+Algoritm (algorithm) - bu masalani yechishning aniq qadamlar ketma-ketligi. Ma'lumotlar tuzilmasi (data structure) esa - o'sha ma'lumotni xotirada qanday saqlash va tartiblash. Ikkovi birga ishlaydi: to'g'ri tuzilmani tanlasangiz, algoritm tez ishlaydi; noto'g'ri tanlasangiz, oddiygina ish ham sekinlashib ketadi.
+
+Bu bo'lim quruq "kitob ro'yxati" emas. Har bir mavzuni qisqa tushuntiramiz, so'ng ishlaydigan Go kodi bilan ko'rsatamiz. Kodni faqat o'qib qo'yish shart emas - `go run` bilan ishga tushirib, natijasini o'z ko'zingiz bilan ko'ring.
+
+## Nega buni o'rganish kerak
+
+Kundalik ishda o'zingiz red-black tree yozib o'tirmaysiz, buni tan olaylik. Lekin qaysi tuzilmani qachon ishlatishni bilish - kod tez yoki sekin ishlashini bevosita hal qiladi. `map` da qidiruv `O(1)`, `slice` da esa `O(n)`. Shuni bilsangiz, million elementli ma'lumot ustida to'g'ri qaror qabul qilasiz.
+
+## Big-O ni qanday o'qish kerak
+
+Big-O - algoritm ma'lumot hajmi (`n`) o'sgani sari qanchalik sekinlashishini ko'rsatadi. U aniq vaqtni emas, o'sish tezligini o'lchaydi:
+
+| Belgi | Nomi | Misol |
+| --- | --- | --- |
+| `O(1)` | doimiy | `map` dan qiymat olish |
+| `O(log n)` | logarifmik | binary search |
+| `O(n)` | chiziqli | slice bo'ylab aylanish |
+| `O(n log n)` | linearitmik | tezkor saralash |
+| `O(n^2)` | kvadratik | ikki ichma-ich sikl |
+
+`n` kichik bo'lsa farqni sezmaysiz. Lekin `n` millionga chiqsa, `O(n^2)` algoritm soatlab, `O(n log n)` esa soniyalarda ishlaydi. Shuning uchun tuzilma va algoritm tanlaganda shu jadvalni yodda tuting.
+
+## Misollar Go da
+
+Barcha kod namunalari Go 1.22+ uchun yozilgan. Ularni o'z kompyuteringizda ishga tushiring, o'zgartiring, atay sindiring - o'rganishning eng yaxshi yo'li shu.
+
+Keyingi sahifada Big-O ni batafsil ko'ramiz.
+
+**Manba / batafsil:** [Go Data Structures - go.dev](https://go.dev/tour/moretypes/1)

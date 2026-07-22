@@ -1,0 +1,67 @@
+# Proxy
+
+**Muammo:** haqiqiy obyektga murojaatni nazorat qilmoqchisiz - masalan, "og'ir" manba (ma'lumotlar bazasi, tarmoq) chaqiruvini keshlash, log yozish yoki ruxsatni tekshirish. Lekin chaqiruvchi kod farqni sezmasligi kerak.
+
+**G'oya:** haqiqiy obyekt bilan **bir xil interfeysli** o'rinbosar (proxy) yasaysiz. Proxy o'z ishini (kesh, log) bajaradi va kerak bo'lsagina haqiqiy obyektga murojaat qiladi.
+
+```go filename="proxy.go"
+package main
+
+import "fmt"
+
+type Store interface {
+	Get(key string) string
+}
+
+// Haqiqiy, "og'ir" manba.
+type Database struct{}
+
+func (Database) Get(key string) string {
+	fmt.Printf("  DB o'qildi: %q\n", key)
+	return "value_of_" + key
+}
+
+// CachingProxy bir xil interfeysni implement qiladi va oldiga kesh qo'yadi.
+type CachingProxy struct {
+	real  Store
+	cache map[string]string
+}
+
+func NewCachingProxy(real Store) *CachingProxy {
+	return &CachingProxy{real: real, cache: make(map[string]string)}
+}
+
+func (p *CachingProxy) Get(key string) string {
+	if v, ok := p.cache[key]; ok {
+		fmt.Printf("  keshdan: %q\n", key)
+		return v
+	}
+	v := p.real.Get(key)
+	p.cache[key] = v
+	return v
+}
+
+func main() {
+	var store Store = NewCachingProxy(Database{})
+
+	fmt.Println("1:", store.Get("user:1"))
+	fmt.Println("2:", store.Get("user:1")) // bu safar keshdan
+	fmt.Println("3:", store.Get("user:2"))
+}
+```
+
+```bash
+$ go run proxy.go
+  DB o'qildi: "user:1"
+1: value_of_user:1
+  keshdan: "user:1"
+2: value_of_user:1
+  DB o'qildi: "user:2"
+3: value_of_user:2
+```
+
+Ikkinchi so'rov DB'ga bormadi - proxy javobni keshdan berdi. `main` uchun `store` oddiy `Store`day ko'rinadi.
+
+**Qachon:** kesh, log, lazy yuklash yoki kirishni cheklash kerak bo'lganda. Go note: Decorator'ga juda o'xshaydi - farqi niyatda: decorator xatti-harakat qo'shadi, proxy murojaatni boshqaradi.
+
+Manba / batafsil: [refactoring.guru/design-patterns/proxy](https://refactoring.guru/design-patterns/proxy/go/example)

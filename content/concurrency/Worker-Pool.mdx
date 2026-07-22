@@ -1,0 +1,66 @@
+# Worker Pool
+
+Ko'p vazifani cheklangan sondagi goroutine bilan qayta ishlash naqshi - **worker pool**. Minglab vazifa uchun minglab goroutine ochish o'rniga, masalan 3 ta ishchi ochamiz; ular bir `jobs` channel dan vazifa oladi, natijani `results` channel ga yozadi. Bu resursni tejaydi va bir vaqtdagi yuk (concurrency darajasi)ni nazorat qiladi.
+
+Uchta bo'lak: `jobs` channel (kirish navbati), `results` channel (chiqish), va bir nechta bir xil `worker` goroutine. Nechta ishchi tugaganini `sync.WaitGroup` kuzatadi.
+
+```go filename="workerpool.go"
+package main
+
+import (
+    "fmt"
+    "sync"
+)
+
+func worker(id int, jobs <-chan int, results chan<- int, wg *sync.WaitGroup) {
+    defer wg.Done()
+    for j := range jobs { // jobs yopilguncha vazifa oladi
+        results <- j * j
+    }
+}
+
+func main() {
+    jobs := make(chan int, 100)
+    results := make(chan int, 100)
+    var wg sync.WaitGroup
+
+    // 3 ta ishchi ishga tushiramiz
+    for w := 1; w <= 3; w++ {
+        wg.Add(1)
+        go worker(w, jobs, results, &wg)
+    }
+
+    // vazifalarni beramiz va jobs ni yopamiz
+    for j := 1; j <= 9; j++ {
+        jobs <- j
+    }
+    close(jobs)
+
+    // ishchilar tugagach results ni yopamiz
+    go func() {
+        wg.Wait()
+        close(results)
+    }()
+
+    sum := 0
+    for r := range results {
+        sum += r
+    }
+    fmt.Println("kvadratlar yig'indisi:", sum)
+}
+```
+
+```bash
+$ go run workerpool.go
+kvadratlar yig'indisi: 285
+```
+
+`1²+2²+...+9² = 285`. Vazifalar 3 ta ishchiga tarqaldi - qaysi ishchi qaysi vazifani olishini oldindan aytib bo'lmaydi, lekin har vazifa aynan bir marta bajariladi (channel har qiymatni faqat bitta oluvchiga beradi).
+
+Ikki muhim nuqta: `jobs` ni yozib bo'lgach `close` qilamiz - shunda ishchilardagi `for range jobs` tabiiy tugaydi. `results` ni esa alohida goroutine da, hamma ishchi `Done` qilgandan keyin yopamiz - `wg.Wait()` bloklovchi bo'lgani uchun uni `range results` dan oldin `main` da chaqirib bo'lmaydi.
+
+**Qisqasi:** worker pool cheklangan goroutine bilan vazifalarni `jobs`→`results` channel lari orqali taqsimlab, concurrency darajasini nazorat qiladi.
+
+Manba / batafsil: [gobyexample.com/worker-pools](https://gobyexample.com/worker-pools)
+
+Vazifalar ketma-ket bosqichlardan o'tishi kerak bo'lsa - pipeline naqshi, keyingi darsda.

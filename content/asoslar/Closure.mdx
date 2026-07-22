@@ -1,0 +1,35 @@
+# Closure
+
+Go'da funksiyalar ham oddiy qiymat: ularni o'zgaruvchiga saqlash, boshqa funksiyaga uzatish yoki undan qaytarish mumkin. Boshqa funksiya ichida yaratilib, tashqaridagi o'zgaruvchini "eslab qoladigan" anonim funksiyani **closure** deb ataymiz. Quyidagi `intSeq` har chaqirilganda o'ziga alohida `i` saqlab turadi.
+
+```go filename="closure.go"
+package main
+
+import "fmt"
+
+func intSeq() func() int {
+    i := 0
+    return func() int {
+        i++
+        return i
+    }
+}
+
+func main() {
+    next := intSeq()
+    fmt.Println(next(), next(), next())
+
+    fresh := intSeq()
+    fmt.Println(fresh())
+}
+```
+
+```bash
+$ go run closure.go
+1 2 3
+1
+```
+
+> Closure o'zi yaratilgan joydagi o'zgaruvchiga bog'lanadi; har bir yangi closure esa o'ziga alohida nusxa oladi.
+
+**Manba / batafsil:** [A Tour of Go — Function closures](https://go.dev/tour/moretypes/25)

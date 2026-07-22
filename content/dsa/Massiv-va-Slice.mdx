@@ -1,0 +1,57 @@
+# Massiv va Slice
+
+Ko'pgina ma'lumotlar tuzilmasining tagida massiv (array) yotadi. Go da array - o'lchami qat'iy, xotirada ketma-ket joylashgan elementlar to'plami. Slice esa array ustidagi moslashuvchan oyna: uning uzunligi (`len`) va sig'imi (`cap`) bo'lib, kerak bo'lganda o'sib boradi. Amalda deyarli har doim slice ishlatasiz.
+
+## Amallar murakkabligi (complexity)
+
+| Amal | Murakkablik | Izoh |
+| --- | --- | --- |
+| Indeks bo'yicha o'qish `s[i]` | `O(1)` | to'g'ridan-to'g'ri manzil |
+| Oxiriga qo'shish `append` | `O(1)`* | amortizatsiya qilingan |
+| Boshiga/o'rtaga qo'shish | `O(n)` | qolganini surish kerak |
+| O'chirish (o'rtadan) | `O(n)` | teshikni to'ldirish |
+| Qidiruv (tartibsiz) | `O(n)` | har elementga qarash |
+
+*`append` odatda `O(1)`, lekin sig'im tugaganda Go yangi, kattaroq massiv ajratib, ma'lumotni ko'chiradi - o'sha payt `O(n)` bo'ladi. O'rtacha hisobda (amortizatsiya) baribir `O(1)`.
+
+## Kodda
+
+```go filename="slice.go"
+package main
+
+import (
+    "fmt"
+    "slices"
+)
+
+func main() {
+    s := []int{10, 20, 30}
+
+    // O(1): oxiriga qo'shish
+    s = append(s, 40)
+
+    // O(n): 1-indeksga 15 ni qo'yish (o'rtaga qo'shish)
+    s = slices.Insert(s, 1, 15)
+
+    // O(n): 2-indeksdagi elementni o'chirish
+    s = slices.Delete(s, 2, 3)
+
+    // O(1): indeks bo'yicha o'qish
+    fmt.Println("birinchi element:", s[0])
+    fmt.Println("slice:", s)
+    fmt.Println("len:", len(s), "cap:", cap(s))
+}
+```
+
+```bash
+$ go run slice.go
+birinchi element: 10
+slice: [10 15 30 40]
+len: 4 cap: 6
+```
+
+Slice qiymat sifatida uzatilsa ham, ichidagi massiv umumiy bo'lib qolaveradi - shuning uchun funksiyaga slice berib yuborsangiz, u ichidagi elementni o'zgartirib qo'yishi mumkin. Buni esdan chiqarmang.
+
+**Xulosa:** Slice - Go ning asosiy to'plam turi. Oxiriga qo'shish arzon, o'rtasiga qo'shish qimmat.
+
+**Manba / batafsil:** [Go Slices: usage and internals](https://go.dev/blog/slices-intro)

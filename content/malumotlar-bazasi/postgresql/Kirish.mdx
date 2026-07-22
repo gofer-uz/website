@@ -1,0 +1,85 @@
+# PostgreSQL va Go
+
+PostgreSQL — ochiq kodli, ishonchli va imkoniyatlari boy relatsion baza: transaksiyalar, `uuid`, `jsonb`, `citext` — hammasi qutidan chiqadi. Go'ning aniq turlari (`int64`, `string`, `time.Time`) PostgreSQL turlariga tabiiy o'giriladi.
+
+## Driver tanlash: `lib/pq` yoki `pgx`
+
+Ikkala driver ham `database/sql` bilan ishlaydi, lekin orasidagi farq muhim:
+
+- **`github.com/lib/pq`** — eski va mashhur, ammo amalda "maintenance mode"da, ya'ni endi faol rivojlanmaydi. Hujjatining o'zi `pgx`'ni tavsiya qiladi. Yangi loyihada uni tanlashning ma'nosi yo'q.
+- **`github.com/jackc/pgx`** — bugungi standart. PostgreSQL protokolini o'zi amalga oshiradi: tezroq ishlaydi, aniq xatolar beradi (`pgx.ErrNoRows`, error kodlari) va PostgreSQL turlarini yaxshi tushunadi. Ham `database/sql` orqali, ham to'g'ridan-to'g'ri `pgxpool` orqali ishlaydi.
+
+**Tavsiya:** yangi loyihada `pgx/v5`'ni to'g'ridan-to'g'ri `pgxpool` bilan ishlating. Butun bo'lim davomida shuni ishlatamiz.
+
+Manba / batafsil: [pkg.go.dev/github.com/jackc/pgx/v5](https://pkg.go.dev/github.com/jackc/pgx/v5)
+
+## O'rnatish
+
+```bash
+$ go get github.com/jackc/pgx/v5
+```
+
+`pgxpool` — `pgx/v5` ichidagi paket; connection pool (ulanishlar havzasi) beradi. Uni alohida `go get` qilish shart emas.
+
+## Docker bilan PostgreSQL
+
+Lokal bazani ko'tarishning eng qulay yo'li — Docker:
+
+```bash
+$ docker run --name gopher-pg \
+    -e POSTGRES_USER=gopher -e POSTGRES_PASSWORD=secret -e POSTGRES_DB=shop \
+    -p 5432:5432 -d postgres:16
+```
+
+```bash
+$ docker exec -it gopher-pg psql -U gopher -d shop
+psql (16.3)
+shop=# SELECT version();
+ PostgreSQL 16.3 on x86_64-pc-linux-gnu ...
+shop=# \q
+```
+
+Bitta buyruq — va qo'lingizda ishlaydigan `postgres:16` turibdi.
+
+Manba / batafsil: [postgresql.org/docs/16](https://www.postgresql.org/docs/16/)
+
+## Birinchi so'rov
+
+Go'dan bazaga ulanib, oddiy `SELECT` yuboramiz. Connection string — `postgres://user:parol@host:port/dbname` ko'rinishidagi URL.
+
+```go filename="first.go"
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func main() {
+    ctx := context.Background()
+
+    pool, err := pgxpool.New(ctx, "postgres://gopher:secret@localhost:5432/shop")
+    if err != nil {
+        log.Fatalf("pool yaratib bo'lmadi: %v", err)
+    }
+    defer pool.Close()
+
+    var greeting string
+    if err := pool.QueryRow(ctx, "SELECT 'salom, PostgreSQL'").Scan(&greeting); err != nil {
+        log.Fatalf("so'rov xatosi: %v", err)
+    }
+    fmt.Println(greeting)
+}
+```
+
+```bash
+$ go run first.go
+salom, PostgreSQL
+```
+
+Shu natijani ko'rsangiz — demak Go, driver va PostgreSQL bir-biri bilan bemalol gaplashyapti.
+
+Keyingi qadam — ulanishni jiddiyroq sozlash: [Ulanish](/malumotlar-bazasi/postgresql/Ulanish).

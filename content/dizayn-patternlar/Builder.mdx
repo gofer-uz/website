@@ -1,0 +1,61 @@
+# Builder
+
+**Muammo:** ko'p qismli obyektni bosqichma-bosqich qurish kerak, lekin qismlarning bir qismi ixtiyoriy. Konstruktorga o'nta argument tiqishtirish yoki har xil kombinatsiya uchun alohida konstruktor yozish noqulay.
+
+**G'oya:** har bir qadam `Builder`ning o'zini qaytaradi, shuning uchun chaqiruvlarni zanjir qilib ulash mumkin (fluent API). Oxirida `Build` tayyor natijani beradi.
+
+```go filename="builder.go"
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type QueryBuilder struct {
+	table   string
+	columns []string
+	where   []string
+	limit   int
+}
+
+func NewQueryBuilder(table string) *QueryBuilder {
+	return &QueryBuilder{table: table, columns: []string{"*"}}
+}
+
+func (b *QueryBuilder) Select(cols ...string) *QueryBuilder { b.columns = cols; return b }
+func (b *QueryBuilder) Where(cond string) *QueryBuilder     { b.where = append(b.where, cond); return b }
+func (b *QueryBuilder) Limit(n int) *QueryBuilder           { b.limit = n; return b }
+
+func (b *QueryBuilder) Build() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "SELECT %s FROM %s", strings.Join(b.columns, ", "), b.table)
+	if len(b.where) > 0 {
+		fmt.Fprintf(&sb, " WHERE %s", strings.Join(b.where, " AND "))
+	}
+	if b.limit > 0 {
+		fmt.Fprintf(&sb, " LIMIT %d", b.limit)
+	}
+	return sb.String()
+}
+
+func main() {
+	sql := NewQueryBuilder("users").
+		Select("id", "name", "email").
+		Where("age > 18").
+		Where("active = true").
+		Limit(10).
+		Build()
+
+	fmt.Println(sql)
+}
+```
+
+```bash
+$ go run builder.go
+SELECT id, name, email FROM users WHERE age > 18 AND active = true LIMIT 10
+```
+
+**Qachon:** qurilish ko'p bosqichli va tartibli bo'lganda (SQL, HTTP so'rov, hujjat). Go note: oddiy konfiguratsiya uchun Builder o'rniga ko'pincha functional options afzalroq - keyingi sahifada.
+
+Manba / batafsil: [refactoring.guru/design-patterns/builder](https://refactoring.guru/design-patterns/builder/go/example)

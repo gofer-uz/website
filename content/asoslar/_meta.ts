@@ -8,6 +8,17 @@ const meta: MetaRecord = {
   Konstantalar: "Konstantalar",
   For: "For",
   "If-Else": "If/Else",
+  Switch: "Switch",
+  Massivlar: "Massivlar",
+  Slice: "Slice",
+  Map: "Map",
+  Range: "Range",
+  Funksiyalar: "Funksiyalar",
+  "Variadic-Funksiyalar": "Variadic Funksiyalar",
+  Closure: "Closure",
+  Rekursiya: "Rekursiya",
+  Pointerlar: "Pointerlar",
+  Mashqlar: "🧩 Mashqlar",
 }
 
 export default meta

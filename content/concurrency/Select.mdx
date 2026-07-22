@@ -1,0 +1,88 @@
+# Select
+
+Bir nechta channel ni bir vaqtda kuzatish uchun `select` bor. U `switch` ga o'xshaydi, lekin har bir `case` channel operatsiyasi:
+
+```go
+select {
+case v := <-ch1: // ch1 dan qiymat keldi
+case ch2 <- x:   // ch2 ga yuborildi
+}
+```
+
+`select` tayyor bo'lgan case ni bajaradi; bir nechtasi tayyor bo'lsa, biri **tasodifiy** tanlanadi; hech biri tayyor bo'lmasa (default siz) kutadi.
+
+```go filename="select.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    c1 := make(chan string)
+    c2 := make(chan string)
+
+    go func() { time.Sleep(100 * time.Millisecond); c1 <- "biri" }()
+    go func() { time.Sleep(200 * time.Millisecond); c2 <- "ikki" }()
+
+    for range 2 {
+        select {
+        case msg := <-c1:
+            fmt.Println("qabul qilindi:", msg)
+        case msg := <-c2:
+            fmt.Println("qabul qilindi:", msg)
+        }
+    }
+}
+```
+
+```bash
+$ go run select.go
+qabul qilindi: biri
+qabul qilindi: ikki
+```
+
+`c1` tezroq (100ms) tayyor bo'ldi, shu bois birinchi tanlandi. Har `select` faqat bitta case ni bajaradi.
+
+## `default` va timeout
+
+`default` case hech bir channel tayyor bo'lmaganda darhol ishlaydi - bu "non-blocking" tekshirish uchun. Eng foydali naqsh esa **timeout**: `time.After(d)` `d` vaqt o'tgach qiymat yuboradigan channel qaytaradi, uni case sifatida qo'ysak "shu vaqtgacha javob kelmasa, kutishni bas qil" bo'ladi:
+
+```go filename="timeout.go"
+package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    result := make(chan string)
+
+    go func() {
+        time.Sleep(300 * time.Millisecond) // sekin operatsiya
+        result <- "natija tayyor"
+    }()
+
+    select {
+    case res := <-result:
+        fmt.Println(res)
+    case <-time.After(150 * time.Millisecond):
+        fmt.Println("timeout: juda uzoq kutdik")
+    }
+}
+```
+
+```bash
+$ go run timeout.go
+timeout: juda uzoq kutdik
+```
+
+Operatsiya 300ms kerak qildi, biz esa 150ms kutdik - `time.After` oldin otildi. Bu naqsh tarmoq so'rovi kabi "qotib qolishi mumkin" har qanday operatsiyani himoyalaydi.
+
+**Qisqasi:** `select` bir nechta channel ni kuzatadi; `default` bloklanmaydi, `time.After` timeout beradi.
+
+Manba / batafsil: [go.dev/tour/concurrency/5](https://go.dev/tour/concurrency/5), [Go spec — Select](https://go.dev/ref/spec#Select_statements)
+
+Goroutine larni birma-bir kutish uchun `sync.WaitGroup` - keyingi darsda.

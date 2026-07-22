@@ -1,0 +1,36 @@
+# Ma'lumotlar Bazasi
+
+Har qanday jiddiy dastur ma'lumotni bir joyda saqlaydi: foydalanuvchilar, buyurtmalar, xabarlar, hisob-kitoblar. Ma'lumotlar bazasi (database) — aynan shu ma'lumotni ishonchli saqlaydigan, qidiradigan va yangilaydigan tizim. Bu bo'limda Go'da baza bilan qanday ishlashni real, ishlaydigan misollar orqali ko'rsatamiz.
+
+## Go va ma'lumotlar bazalari
+
+Go'da baza bilan ishlashning o'zagida standart kutubxonadagi `database/sql` paketi turadi. Uning eng muhim jihati — u hech qaysi aniq bazaga bog'lanib qolmagan. `database/sql` faqat umumiy interfeys beradi: so'rov (query) yuborish, natijani o'qish, transaksiya (transaction) ochish. Aynan qaysi baza bilan gaplashishni esa alohida **driver** hal qiladi.
+
+Model shunday ishlaydi:
+
+- `database/sql` — standart interfeys (`DB`, `Rows`, `Tx` va hokazo).
+- **driver** — konkret baza bilan tarmoq orqali gaplashadigan paket. PostgreSQL uchun `lib/pq` yoki `pgx`, MySQL uchun `go-sql-driver/mysql`, SQLite uchun `mattn/go-sqlite3`.
+
+Kodni `database/sql` interfeysiga qarab yozasiz, driverni esa import qilib "ulab" qo'yasiz. Bazani almashtirmoqchi bo'lsangiz, ko'pincha shunchaki driver va SQL dialektini o'zgartirasiz — kodning qolgan tuzilishi joyida qoladi. Go dizaynining kuchi shunda: interfeys bir joyda, uni amalga oshirish (implementation) alohida. Ba'zi zamonaviy driverlar (masalan, `pgx`) buning ustiga o'zining tezroq, to'g'ridan-to'g'ri API'sini ham beradi.
+
+Manba / batafsil: [pkg.go.dev/database/sql](https://pkg.go.dev/database/sql)
+
+## Nega bu bo'lim bor
+
+Biz — O'zbekiston Go jamoasimiz. Maqsadimiz oddiy: bazani quruq nazariya bilan emas, klonlab hoziroq ishga tushirsa bo'ladigan haqiqiy Go kodi bilan o'rgatish. Har bir tushunchadan keyin to'liq `package main` misoli va uning natijasi keladi — xuddi qolgan qo'llanmalarimizdagidek.
+
+Bo'lim atayin kengaytirsa bo'ladigan qilib tuzilgan. Har bir baza alohida ichki papkada turadi:
+
+```bash
+malumotlar-bazasi/
+  index.mdx        # shu sahifa
+  postgresql/      # birinchi baza — to'liq yoritilgan
+  # mongodb/       # kelajakda qo'shiladi
+  # sqlite/        # kelajakda qo'shiladi
+```
+
+Birinchi bo'lib **PostgreSQL** ni tanladik. Sababi oddiy: u ochiq kodli, juda ishonchli, imkoniyatlari boy va Go hamjamiyatida eng ko'p ishlatiladigan relatsion bazalardan biri. Ustiga, jamoamizning namunaviy loyihasi [`auth-platform`](https://github.com/gofer-uz/auth-platform) ham aynan PostgreSQL ustiga qurilgan — o'sha loyihani bo'lim oxirida boshidan oxirigacha ko'rib chiqamiz.
+
+MongoDB va boshqa bazalar keyinroq shu yerga qo'shni papka sifatida qo'shiladi. Tuzilma shunga tayyor.
+
+PostgreSQL'dan boshlaymiz — [PostgreSQL / Kirish](/malumotlar-bazasi/postgresql/Kirish) sahifasidan.

@@ -1,0 +1,94 @@
+# Error interfeysi
+
+`error` sehrli tur emas — u oddiygina interfeys (interface):
+
+```go
+type error interface {
+	Error() string
+}
+```
+
+Ya'ni `Error() string` metodi bor istalgan tur `error` bo'la oladi. `errors.New` va `fmt.Errorf` ham aslida shu metodni bajaradigan tuzilmani qaytaradi. Demak, o'zingizning xatolik turlaringizni ham bemalol yasashingiz mumkin.
+
+## O'z xatolik turingiz
+
+Xatolikda faqat matn emas, qo'shimcha ma'lumot ham saqlamoqchi bo'lsangiz, `struct` yasab, unga `Error() string` metodini qo'shasiz:
+
+```go filename="validation.go"
+package main
+
+import "fmt"
+
+type ValidationError struct {
+	Maydon string
+	Xabar  string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("%s maydoni noto'g'ri: %s", e.Maydon, e.Xabar)
+}
+
+func tekshir(ism string) error {
+	if ism == "" {
+		return &ValidationError{Maydon: "ism", Xabar: "bo'sh bo'lishi mumkin emas"}
+	}
+	return nil
+}
+
+func main() {
+	if err := tekshir(""); err != nil {
+		fmt.Println(err)
+	}
+}
+```
+
+```bash
+$ go run validation.go
+ism maydoni noto'g'ri: bo'sh bo'lishi mumkin emas
+```
+
+Metodni pointer receiver (`*ValidationError`)da e'lon qildik — xatolik turlari uchun odatda shunday qilinadi. Endi bu xatolikni oddiy `error` sifatida uzatib, keyinroq ichidan `Maydon`ni ochib olsa bo'ladi.
+
+## Sentinel errorlar
+
+Xatolikni nomi bilan aniq taniy olish kerak bo'lsa, oldindan e'lon qilib qo'yilgan xatolik qiymati — "sentinel error" ishlatiladi. Kelishuvga ko'ra uning nomi `Err` bilan boshlanadi:
+
+```go filename="sentinel.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrTopilmadi = errors.New("element topilmadi")
+
+var ombor = map[string]int{"olma": 50}
+
+func narxOl(mahsulot string) (int, error) {
+	narx, ok := ombor[mahsulot]
+	if !ok {
+		return 0, ErrTopilmadi
+	}
+	return narx, nil
+}
+
+func main() {
+	if _, err := narxOl("banan"); err == ErrTopilmadi {
+		fmt.Println("bu mahsulot omborda yo'q")
+	}
+}
+```
+
+```bash
+$ go run sentinel.go
+bu mahsulot omborda yo'q
+```
+
+`io.EOF`, `sql.ErrNoRows`, `os.ErrNotExist` — bularning bari sentinel error. Ularni matnni solishtirib emas, aniq qiymat bilan tekshiring. Bitta ogohlantirish: xatolik `%w` bilan o'ralib qolsa, oddiy `==` ishlamay qoladi — o'shanda `errors.Is` kerak bo'ladi.
+
+**Takeaway:** `Error() string` metodini bajaradigan istalgan tur xatolik bo'la oladi; nomi bilan taniladigan holatlar uchun sentinel error ishlating.
+
+**Manba / batafsil:** [error turi (Go spec)](https://go.dev/ref/spec#Errors), [io.EOF namunasi](https://pkg.go.dev/io#pkg-variables)
+
+Endi xatolikni o'rab, unga kontekst qo'shishni ko'rib chiqamiz.

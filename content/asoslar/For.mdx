@@ -1,6 +1,6 @@
 # For Loop
 
-Go da faqat bitta loop bor - `for`. Boshqa tillardagi misol JavaScriptdagi `while`, `do-while` ham `for` orqali amalga oshiriladi.
+Go'da bitta yagona loop bor — `for`. Boshqa tillardagi `while` va `do-while` ni ham Go'da shu bitta `for` bilan yozamiz.
 
 ## 1. Shartli loop (while kabi)
 
@@ -12,9 +12,9 @@ for i <= 3 {
 }
 ```
 
-Shart `true` bo'lguncha davom etadi. Boshqa tillardagi `while` loopga o'xshaydi.
+Shart `true` bo'lib turgan ekan, loop davom etaveradi — xuddi `while` singari.
 
-## 2. Standaert for loop
+## 2. Standart for loop
 
 ```go
 for j := 0; j < 3; j++ {
@@ -22,7 +22,7 @@ for j := 0; j < 3; j++ {
 }
 ```
 
-Uchta qism: `boshlang'ich; shart; har safar, chaqirilgan funktsiya shart tugallanguncha`.
+Uch qismdan iborat: boshlang'ich qiymat; shart; har iteratsiya oxirida bajariladigan qadam.
 
 ## 3. Range bilan
 
@@ -32,7 +32,7 @@ for i := range 3 {
 }
 ```
 
-0 dan 3 gacha (3 kirmaydigan holda, lekin qadamlar 3ta) takrorlaydi.
+`0` dan `3` gacha aylanadi — `3` ning o'zi kirmaydi, ya'ni jami uch marta.
 
 ## 4. Cheksiz loop
 
@@ -43,7 +43,7 @@ for {
 }
 ```
 
-Shartsiz `for` - cheksiz davom etadi. `break` yoki `return` bilan to'xtatiladi.
+Shartsiz `for` — to'xtovsiz aylanaveradi. Uni `break` yoki `return` bilan to'xtatamiz.
 
 ## 5. Continue
 
@@ -56,7 +56,7 @@ for n := range 6 {
 }
 ```
 
-`continue` joriy iteratsiyani o'tkazib, keyingisiga o'tadi.
+`continue` joriy iteratsiyani tashlab, to'g'ri keyingisiga o'tadi.
 
 ## To'liq misol
 

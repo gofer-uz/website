@@ -1,0 +1,122 @@
+# fmt
+
+`fmt` — ekranga chiqarish, matnni formatlash (format) va o'qish uchun har kuni ishlatadigan asbobingiz. Nomi ham "format" so'zidan olingan.
+
+## Println va Printf
+
+`Println` argumentlar orasiga bo'sh joy qo'yadi va oxiriga yangi qator qo'shib beradi. `Printf` esa verb'lar (`%` bilan boshlanadigan belgilar) orqali natijani aniq boshqarish imkonini beradi — lekin bu yerda `\n` ni o'zingiz qo'shasiz.
+
+```go filename="print.go"
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Salom", "dunyo")
+    fmt.Printf("Ism: %s, yosh: %d\n", "Ali", 27)
+    fmt.Printf("Pi = %.2f\n", 3.14159)
+}
+```
+
+```bash
+$ go run print.go
+Salom dunyo
+Ism: Ali, yosh: 27
+Pi = 3.14
+```
+
+Qisqasi: tez chiqarish kerak bo'lsa — `Println`, formatni aniq nazorat qilmoqchi bo'lsangiz — `Printf`.
+
+Manba / batafsil: [pkg.go.dev/fmt#Printf](https://pkg.go.dev/fmt#Printf)
+
+## Verb'lar
+
+Eng ko'p ishga tushadigan verb'lar shular: `%v` (standart ko'rinish), `%+v` (struct maydon (field) nomlari bilan), `%#v` (Go sintaksisidagi ko'rinish), `%T` (tur/type), `%d` (son), `%s` (string), `%q` (qo'shtirnoq ichida).
+
+```go filename="verbs.go"
+package main
+
+import "fmt"
+
+type Point struct{ X, Y int }
+
+func main() {
+    p := Point{1, 2}
+    fmt.Printf("%v\n", p)   // {1 2}
+    fmt.Printf("%+v\n", p)  // {X:1 Y:2}
+    fmt.Printf("%#v\n", p)  // main.Point{X:1, Y:2}
+    fmt.Printf("%T\n", p)   // main.Point
+    fmt.Printf("%q\n", "salom") // "salom"
+}
+```
+
+```bash
+$ go run verbs.go
+{1 2}
+{X:1 Y:2}
+main.Point{X:1, Y:2}
+main.Point
+"salom"
+```
+
+Qisqasi: debug paytida struct ichida nima borligini ko'rishning eng tez yo'li — `%+v` va `%#v`.
+
+Manba / batafsil: [pkg.go.dev/fmt (Printing)](https://pkg.go.dev/fmt#hdr-Printing)
+
+## Sprintf va Fprintf
+
+`Sprintf` hech narsani ekranga chiqarmaydi — formatlangan natijani `string` qilib qaytaradi. `Fprintf` esa istalgan `io.Writer` ga yozadi: fayl, `os.Stderr`, tarmoq — farqi yo'q. Aslini olganda `Println` ham ichida `Fprintln(os.Stdout, ...)` ni chaqiradi, xolos.
+
+```go filename="sprintf.go"
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    msg := fmt.Sprintf("Foydalanuvchi %s (ID: %d)", "abdurahmon27", 42)
+    fmt.Println(msg)
+    fmt.Fprintln(os.Stderr, "Bu xatolik oqimiga ketadi")
+}
+```
+
+```bash
+$ go run sprintf.go
+Foydalanuvchi abdurahmon27 (ID: 42)
+Bu xatolik oqimiga ketadi
+```
+
+Qisqasi: string yasash uchun `Sprintf`, xatolarni `os.Stderr` ga yo'naltirish uchun `Fprintf`.
+
+Manba / batafsil: [pkg.go.dev/fmt#Sprintf](https://pkg.go.dev/fmt#Sprintf)
+
+## Scan — kiritishni o'qish
+
+`fmt.Scan` standart kirishdan (stdin) qiymatlarni o'qiydi. Argumentlarni ko'rsatkich (pointer) qilib berish shart — funksiya o'qigan qiymatni o'sha o'zgaruvchilarga yozadi.
+
+```go filename="scan.go"
+package main
+
+import "fmt"
+
+func main() {
+    var name string
+    var age int
+    fmt.Print("Ism va yosh: ")
+    fmt.Scan(&name, &age)
+    fmt.Printf("Salom, %s! %d yoshdasiz.\n", name, age)
+}
+```
+
+```bash
+$ echo "Ali 27" | go run scan.go
+Ism va yosh: Salom, Ali! 27 yoshdasiz.
+```
+
+Qisqasi: butun qatorni o'qimoqchi bo'lsangiz `bufio.Scanner` qulayroq (bu haqda keyingi bo'limlarda gaplashamiz).
+
+Manba / batafsil: [pkg.go.dev/fmt#Scan](https://pkg.go.dev/fmt#Scan)
+
+Keyingi qismda `strings` bilan matn ustida ishlashni ko'ramiz.

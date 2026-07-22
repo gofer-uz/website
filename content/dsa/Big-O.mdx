@@ -1,0 +1,74 @@
+# Big-O Notatsiyasi
+
+Big-O algoritm qanchalik yaxshi masshtablanishini (ya'ni hajm oshganda o'zini qanday tutishini) bitta belgi bilan ifodalaydi. U soniyalarni emas, `n` (kirish hajmi) oshgani sari ish hajmi qanday o'sishini ko'rsatadi. Doimiy koeffitsientlar va mayda hadlar tashlab yuboriladi: `3n + 5` ham, `100n` ham baribir `O(n)`.
+
+## Asosiy sinflar
+
+| Big-O | Nomi | 1000 element uchun taxminan | Misol |
+| --- | --- | --- | --- |
+| `O(1)` | doimiy | 1 | `map` dan olish, slice indeksi |
+| `O(log n)` | logarifmik | ~10 | binary search |
+| `O(n)` | chiziqli | 1000 | slice bo'ylab qidiruv |
+| `O(n log n)` | linearitmik | ~10000 | `sort.Slice`, mergesort |
+| `O(n^2)` | kvadratik | 1000000 | bubble sort |
+| `O(2^n)` | eksponensial | juda katta | naive fibonacci |
+
+Intuitsiya oddiy: `O(log n)` - har qadamda masalani ikkiga bo'lasiz. `O(n)` - har elementga bir martadan qaraysiz. `O(n^2)` - har bir element uchun yana barcha elementlarni aylanib chiqasiz.
+
+## Kodda ko'rish
+
+Quyidagi dastur bitta ishni - massivda takroriy juftlik bor-yo'qligini - ikki xil yo'l bilan bajarib, sarflangan qadamlar sonini sanaydi.
+
+```go filename="bigo.go"
+package main
+
+import "fmt"
+
+// O(n^2): har juftlikni tekshiradi
+func hasDupSlow(nums []int) (bool, int) {
+    steps := 0
+    for i := 0; i < len(nums); i++ {
+        for j := i + 1; j < len(nums); j++ {
+            steps++
+            if nums[i] == nums[j] {
+                return true, steps
+            }
+        }
+    }
+    return false, steps
+}
+
+// O(n): map yordamida bir marta aylanadi
+func hasDupFast(nums []int) (bool, int) {
+    steps := 0
+    seen := make(map[int]bool)
+    for _, v := range nums {
+        steps++
+        if seen[v] {
+            return true, steps
+        }
+        seen[v] = true
+    }
+    return false, steps
+}
+
+func main() {
+    nums := []int{5, 2, 9, 1, 7, 4, 8, 3, 6, 0}
+    _, s1 := hasDupSlow(nums)
+    _, s2 := hasDupFast(nums)
+    fmt.Println("O(n^2) qadamlar:", s1)
+    fmt.Println("O(n)   qadamlar:", s2)
+}
+```
+
+```bash
+$ go run bigo.go
+O(n^2) qadamlar: 45
+O(n)   qadamlar: 10
+```
+
+Bor-yo'g'i 10 ta element uchun farq 45 va 10. `n` ni 10000 qilib qo'ysangiz, birinchi variant ~50 million qadam, ikkinchisi atigi 10000 qadam bo'ladi - Big-O ning butun gapi ana shu.
+
+**Xulosa:** Big-O aniq vaqtni emas, o'sish tezligini o'lchaydi. Doim eng katta hadga qarang.
+
+**Manba / batafsil:** [Big-O Cheat Sheet](https://www.bigocheatsheet.com/)

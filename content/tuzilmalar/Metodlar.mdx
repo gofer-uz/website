@@ -1,0 +1,62 @@
+# Metodlar
+
+Metod — bu ma'lum bir turga (type) biriktirilgan funksiya. Oddiy funksiyadan farqi shundaki, nomidan oldin **receiver** turadi — metod qaysi turga tegishli ekanini ko'rsatadigan qism. Receiver ikki xil bo'ladi: **value** (`r Counter`) nusxa ustida ishlaydi, **pointer** (`r *Counter`) esa asl qiymatni o'zgartiradi.
+
+```go filename="receivers.go"
+package main
+
+import "fmt"
+
+type Counter struct {
+    Count int
+}
+
+func (c Counter) IncByValue()    { c.Count++ } // nusxa - asl qiymat o'zgarmaydi
+func (c *Counter) IncByPointer() { c.Count++ } // pointer - asl qiymat o'zgaradi
+
+func main() {
+    c := Counter{}
+
+    c.IncByValue()
+    fmt.Println("value receiverdan keyin:", c.Count)
+
+    c.IncByPointer() // Go o'zi (&c) ni oladi
+    fmt.Println("pointer receiverdan keyin:", c.Count)
+}
+```
+
+```bash
+$ go run receivers.go
+value receiverdan keyin: 0
+pointer receiverdan keyin: 1
+```
+
+Xulosa: agar metod `struct`ni o'zgartirsa yoki `struct` katta bo'lsa — **pointer receiver** ishlating; kichik, o'zgarmaydigan turlar uchun value receiver ham yetadi. Chalkashmaslik uchun bitta turning hamma metodini bir xil receiver bilan yozing.
+
+Metodni faqat `struct`ga emas, o'z paketingizda e'lon qilgan istalgan turga biriktirish mumkin — masalan `float64` ustiga qurilgan turga:
+
+```go filename="named-type.go"
+package main
+
+import "fmt"
+
+type Celsius float64
+
+func (c Celsius) ToFahrenheit() float64 {
+    return float64(c)*9/5 + 32
+}
+
+func main() {
+    var t Celsius = 25
+    fmt.Printf("%.1f°C = %.1f°F\n", float64(t), t.ToFahrenheit())
+}
+```
+
+```bash
+$ go run named-type.go
+25.0°C = 77.0°F
+```
+
+Xulosa: `int` yoki `string` kabi tayyor turlarga to'g'ridan-to'g'ri metod qo'sha olmaysiz — avval ular ustiga o'zingizning `type`ingizni yaratib olishingiz kerak.
+
+Manba / batafsil: [Go spec — Method declarations](https://go.dev/ref/spec#Method_declarations)
